@@ -7,14 +7,14 @@
 """Pipecat Customer Support Voice AI Bot with Moss Semantic Retrieval.
 
 A voice AI customer support assistant that:
-- Uses Groq for intelligent responses
+- Uses OpenAI for intelligent responses
 - Searches knowledge base using Moss semantic retrieval
 - Supports real-time voice conversations
 - Follows official Pipecat quickstart pattern
 
 Required AI services:
 - Deepgram (Speech-to-Text)
-- Groq (LLM)
+- OpenAI (LLM)
 - Cartesia (Text-to-Speech)
 
 Run the bot using::
@@ -63,23 +63,47 @@ load_dotenv(override=True)
 
 
 def create_llm_service():
-    """Create LLM service using Groq."""
-    api_key = os.getenv("GROQ_API_KEY")
-    model = os.getenv("GROQ_MODEL", "openai/gpt-oss-safeguard-20b")  # Default Groq model
+    """Create LLM service with Azure OpenAI or regular OpenAI support."""
+    # Check for Azure OpenAI configuration
+    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    azure_api_key = os.getenv("AZURE_OPENAI_API_KEY") 
+    azure_deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
     
-    if not api_key:
-        raise ValueError(
-            "GROQ_API_KEY environment variable is required. "
-            "Get your API key from https://console.groq.com/"
+    if azure_endpoint and azure_api_key and azure_deployment:
+        logger.info("Using Azure OpenAI configuration")
+        azure_api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
+        
+        # Construct Azure OpenAI base URL
+        base_url = f"{azure_endpoint.rstrip('/')}/openai/deployments/{azure_deployment}"
+        
+        return OpenAILLMService(
+            api_key=azure_api_key,
+            base_url=base_url,
+            model=azure_deployment,
+            default_headers={
+                "api-version": azure_api_version
+            }
         )
-    
-    logger.info(f"Using Groq LLM service (model: {model})")
-    
-    return OpenAILLMService(
-        api_key=api_key,
-        base_url="https://api.groq.com/openai/v1",
-        model=model
-    )
+    else:
+        logger.info("Using standard OpenAI configuration")
+        
+        # Get configuration for OpenAI (supports custom base_url and model)
+        api_key = os.getenv("OPENAI_API_KEY")
+        base_url = os.getenv("OPENAI_BASE_URL")  # Optional custom endpoint
+        model = os.getenv("OPENAI_MODEL", "gpt-4")  # Default to gpt-4 if not specified
+        
+        if base_url:
+            logger.info(f"Using custom OpenAI endpoint: {base_url}")
+            return OpenAILLMService(
+                api_key=api_key,
+                base_url=base_url,
+                model=model
+            )
+        else:
+            return OpenAILLMService(
+                api_key=api_key,
+                model=model
+            )
 
 
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
@@ -187,7 +211,7 @@ async def bot(runner_args: RunnerArguments):
     """Main bot entry point for the customer support bot."""
 
     # Check required environment variables
-    required_vars = ["DEEPGRAM_API_KEY", "CARTESIA_API_KEY", "GROQ_API_KEY"]
+    required_vars = ["DEEPGRAM_API_KEY", "CARTESIA_API_KEY", "OPENAI_API_KEY"]
     
     missing_vars = [var for var in required_vars if not os.getenv(var)]
     if missing_vars:
@@ -195,7 +219,7 @@ async def bot(runner_args: RunnerArguments):
         for var in missing_vars:
             logger.error(f"   - {var}")
         logger.error("\nPlease update your .env file with the required API keys")
-        logger.error("Get your Groq API key from: https://console.groq.com/")
+        logger.error("Get your OpenAI API key from: https://platform.openai.com/")
         return
 
     transport_params = {
