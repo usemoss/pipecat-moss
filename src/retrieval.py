@@ -45,58 +45,40 @@ class MossRetrievalService(FrameProcessor):
         self,
         *,
         index_name: str,
+        client: Optional[MossClient] = None,
         project_id: Optional[str] = None,
         project_key: Optional[str] = None,
         top_k: int = 5,
-        auto_load_index: bool = True,
         system_prompt: str = "Here is additional context retrieved from memory:\n\n",
-        add_as_system_message: bool = True,
-        deduplicate_queries: bool = True,
-        max_documents: int = 5,
-        max_document_chars: Optional[int] = 2000,
-        client: Optional[MossClient] = None,
-        name: Optional[str] = None,
+        **kwargs,
     ):
         """Initialize the Moss retrieval service.
-
+        
         Args:
-            index_name: Name of the Moss index to query.
-            project_id: Moss project ID (optional if provided via env var).
-            project_key: Moss project key (optional if provided via env var).
-            top_k: Number of results to retrieve from the index. Defaults to 5.
-            auto_load_index: Whether to automatically load the index. Defaults to True.
-            system_prompt: Prefix text for the injected context.
-            add_as_system_message: If True, adds context as a system message.
-                If False, appends to the user message. Defaults to True.
-            deduplicate_queries: Whether to skip retrieval if the query matches
-                the previous one. Defaults to True.
-            max_documents: Maximum number of documents to include in context.
-                Defaults to 5.
-            max_document_chars: Maximum characters per document. None for no limit.
-                Defaults to 2000.
-            client: Existing MossClient instance. If None, creates a new one.
-            name: Optional name for the processor.
-
-        Raises:
-            ValueError: If index_name is not provided.
+            index_name: Name of the Moss index.
+            client: Existing MossClient (optional).
+            project_id: Moss project ID (optional).
+            project_key: Moss project key (optional).
+            top_k: Max results (default: 5).
+            system_prompt: Context prefix.
+            **kwargs: Additional options (deduplicate_queries, max_documents, etc).
         """
-        super().__init__(name=name)
+        super().__init__(name=kwargs.get("name"))
         if not index_name:
             raise ValueError("index_name must be provided")
 
         self._index_name = index_name
         self._top_k = max(1, top_k)
-        self._auto_load_index = auto_load_index
         self._system_prompt = system_prompt
-        self._add_as_system_message = add_as_system_message
-        self._deduplicate_queries = deduplicate_queries
-        self._max_documents = max(1, max_documents)
-        self._max_document_chars = max_document_chars
+        
+        # Configurable options with defaults
+        self._auto_load_index = kwargs.get("auto_load_index", True)
+        self._add_as_system_message = kwargs.get("add_as_system_message", True)
+        self._deduplicate_queries = kwargs.get("deduplicate_queries", True)
+        self._max_documents = max(1, kwargs.get("max_documents", 5))
+        self._max_document_chars = kwargs.get("max_document_chars", 2000)
 
-        self._client = client or MossClient(
-            project_id=project_id,
-            project_key=project_key,
-        )
+        self._client = client or MossClient(project_id=project_id, project_key=project_key)
         self._last_query: Optional[str] = None
 
     def can_generate_metrics(self) -> bool:
@@ -211,21 +193,16 @@ class MossRetrievalService(FrameProcessor):
         Returns:
             The text content of the last user message, or None if not found.
         """
-        for message in reversed(messages):
-            if message.get("role") == "user":
-                content = message.get("content")
+        for m in reversed(messages):
+            if m.get("role") == "user":
+                content = m.get("content")
                 if isinstance(content, str):
-                    return content.strip() or None
+                    return content.strip()
+                # Simplified list handling (assumes standard structure)
                 if isinstance(content, list):
-                    parts = [
-                        c["text"]
-                        for c in content
-                        if isinstance(c, dict)
-                        and c.get("type") == "text"
-                        and isinstance(c.get("text"), str)
-                    ]
-                    if parts:
-                        return "\n".join(parts).strip() or None
+                    return "\n".join(
+                        c["text"] for c in content if c.get("type") == "text"
+                    ).strip()
         return None
 
     def _format_documents(self, documents: Sequence[Any]) -> str:
@@ -238,31 +215,22 @@ class MossRetrievalService(FrameProcessor):
             A formatted string containing the system prompt and document contents.
         """
         lines = [self._system_prompt.rstrip(), ""]
-        for idx, document in enumerate(documents, start=1):
-            suffix = ""
+        for idx, doc in enumerate(documents, start=1):
+            # Trust the object structure from our own library
+            meta = doc.metadata or {}
             extras = []
-
-            # Handle metadata (which might be None or dict-like)
-            metadata = getattr(document, "metadata", None) or {}
-
-            if source := metadata.get("source") or metadata.get("origin"):
+            
+            if source := meta.get("source"):
                 extras.append(f"source={source}")
-
-            # Check for score at top level (Rust struct) then metadata
-            score = getattr(document, "score", None)
-            if score is None:
-                score = metadata.get("score")
-
-            if score is not None:
+            
+            if (score := getattr(doc, "score", None)) is not None:
                 extras.append(f"score={score}")
 
-            if extras:
-                suffix = f" ({', '.join(extras)})"
-
-            text = getattr(document, "text", "")
-            limit = self._max_document_chars
-            if limit and len(text) > limit:
-                text = f"{text[:limit].rstrip()}…"
+            suffix = f" ({', '.join(extras)})" if extras else ""
+            
+            text = doc.text
+            if self._max_document_chars and len(text) > self._max_document_chars:
+                text = f"{text[:self._max_document_chars].rstrip()}…"
 
             lines.append(f"{idx}. {text}{suffix}")
-        return "\n".join(line for line in lines if line).strip()
+        return "\n".join(lines).strip()
