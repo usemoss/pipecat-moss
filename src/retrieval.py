@@ -12,14 +12,13 @@ LLM context with relevant documents retrieved from memory or vector databases.
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Sequence
 
 from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
 from pipecat.frames.frames import ErrorFrame, Frame, LLMContextFrame, LLMMessagesFrame, MetricsFrame
-from pipecat.metrics.metrics import ProcessingMetricsData, TTFBMetricsData
+from pipecat.metrics.metrics import ProcessingMetricsData
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from .client import MossClient
@@ -33,7 +32,7 @@ except ImportError:  # pragma: no cover - optional dependency is always present 
     OpenAILLMContext = LLMContext  # type: ignore
     OpenAILLMContextFrame = LLMContextFrame  # type: ignore
 
-__all__ = ["RetrievedDocument", "RetrievalService", "MossRetrievalService"]
+__all__ = ["RetrievedDocument", "MossRetrievalService"]
 
 
 class RetrievedDocument(BaseModel):
@@ -44,8 +43,8 @@ class RetrievedDocument(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
-class RetrievalService(FrameProcessor, ABC):
-    """Base class for retrieval/vector-store services that augment LLM context."""
+class MossRetrievalService(FrameProcessor):
+    """Retrieval service backed by InferEdge Moss vector indexes."""
 
     class Params(BaseModel):
         """Configuration parameters for retrieval services."""
@@ -58,24 +57,108 @@ class RetrievalService(FrameProcessor, ABC):
         max_documents: int = Field(default=5, ge=1)
         max_document_chars: Optional[int] = Field(default=2000, ge=1)
 
+    class Config(BaseModel):
+        index_name: str
+        project_id: Optional[str] = None
+        project_key: Optional[str] = None
+        top_k: int = Field(default=5, ge=1)
+        auto_load_index: bool = True
+
+        @field_validator("index_name")
+        @classmethod
+        def _validate_index(cls, value: str) -> str:
+            if not value:
+                raise ValueError("index_name must be provided")
+            return value
+
     def __init__(
         self,
         *,
+        config: Config,
         params: Optional[Params] = None,
+        client: Optional[MossClient] = None,
         name: Optional[str] = None,
     ):
         super().__init__(name=name)
-        self._params = params or RetrievalService.Params()
+        self._config = config
+        self._params = params or MossRetrievalService.Params()
+        self._client = client or MossClient(
+            project_id=config.project_id,
+            project_key=config.project_key,
+        )
         self._last_query: Optional[str] = None
 
     def can_generate_metrics(self) -> bool:
         return True
 
-    @abstractmethod
     async def retrieve_documents(
         self, query: str, *, limit: int
     ) -> Sequence[RetrievedDocument]:
-        """Return normalized documents for the supplied query."""
+        top_k = min(self._config.top_k, limit)
+        try:
+            result = await self._client.query(
+                self._config.index_name,
+                query,
+                top_k=top_k,
+                auto_load=self._config.auto_load_index,
+            )
+
+            if self.metrics_enabled:
+                time_taken = getattr(result, "time_taken_ms", None)
+                if time_taken is None and isinstance(result, dict):
+                    time_taken = result.get("time_taken_ms")
+
+                if time_taken is not None:
+                    logger.info(f"{self}: Retrieval latency: {time_taken}ms")
+                    await self.push_frame(
+                        MetricsFrame(
+                            data=[
+                                ProcessingMetricsData(
+                                    processor=self.name,
+                                    value=time_taken / 1000.0,
+                                )
+                            ]
+                        )
+                    )
+                else:
+                    logger.warning(f"{self}: 'time_taken_ms' missing or None in result.")
+        except Exception as e:
+            logger.error(f"{self}: Moss retrieval failed: {e}")
+            return []
+
+        docs = getattr(result, "docs", []) or []
+        documents = []
+        
+        for item in docs:
+            # Handle both dict-like and object-like items
+            is_dict = isinstance(item, dict)
+            get_val = lambda k: item.get(k) if is_dict else getattr(item, k, None)
+            
+            text = get_val("text") or get_val("content") or get_val("chunk_text")
+            if not text or not isinstance(text, str):
+                continue
+
+            metadata = get_val("metadata") or {}
+            if not isinstance(metadata, dict):
+                 metadata = {} # ensure dict
+                 
+            # Lift score/source into metadata if present at top level
+            if (score := get_val("score")) is not None:
+                metadata["score"] = score
+            if source := get_val("source"):
+                metadata["source"] = source
+            
+            doc_id = get_val("id") or get_val("doc_id")
+
+            documents.append(
+                RetrievedDocument(
+                    id=str(doc_id) if doc_id else None,
+                    text=text.strip(),
+                    metadata=metadata
+                )
+            )
+            
+        return documents[:limit]
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         """Process frames to extract queries and augment LLM context with retrieved documents."""
@@ -177,105 +260,3 @@ class RetrievalService(FrameProcessor, ABC):
                 
             lines.append(f"{idx}. {text}{suffix}")
         return "\n".join(line for line in lines if line).strip()
-
-
-class MossRetrievalService(RetrievalService):
-    """Retrieval service backed by InferEdge Moss vector indexes."""
-
-    class Config(BaseModel):
-        index_name: str
-        project_id: Optional[str] = None
-        project_key: Optional[str] = None
-        top_k: int = Field(default=5, ge=1)
-        auto_load_index: bool = True
-
-        @field_validator("index_name")
-        @classmethod
-        def _validate_index(cls, value: str) -> str:
-            if not value:
-                raise ValueError("index_name must be provided")
-            return value
-
-    def __init__(
-        self,
-        *,
-        config: Config,
-        params: Optional[RetrievalService.Params] = None,
-        client: Optional[MossClient] = None,
-        name: Optional[str] = None,
-    ):
-        super().__init__(params=params, name=name)
-        self._config = config
-        self._client = client or MossClient(
-            project_id=config.project_id,
-            project_key=config.project_key,
-        )
-
-    async def retrieve_documents(
-        self, query: str, *, limit: int
-    ) -> Sequence[RetrievedDocument]:
-        top_k = min(self._config.top_k, limit)
-        try:
-            result = await self._client.query(
-                self._config.index_name,
-                query,
-                top_k=top_k,
-                auto_load=self._config.auto_load_index,
-            )
-
-            if self.metrics_enabled:
-                time_taken = getattr(result, "time_taken_ms", None)
-                if time_taken is None and isinstance(result, dict):
-                    time_taken = result.get("time_taken_ms")
-
-                if time_taken is not None:
-                    logger.info(f"{self}: Retrieval latency: {time_taken}ms")
-                    await self.push_frame(
-                        MetricsFrame(
-                            data=[
-                                ProcessingMetricsData(
-                                    processor=self.name,
-                                    value=time_taken / 1000.0,
-                                )
-                            ]
-                        )
-                    )
-                else:
-                    logger.warning(f"{self}: 'time_taken_ms' missing or None in result.")
-        except Exception as e:
-            logger.error(f"{self}: Moss retrieval failed: {e}")
-            return []
-
-        docs = getattr(result, "docs", []) or []
-        documents = []
-        
-        for item in docs:
-            # Handle both dict-like and object-like items
-            is_dict = isinstance(item, dict)
-            get_val = lambda k: item.get(k) if is_dict else getattr(item, k, None)
-            
-            text = get_val("text") or get_val("content") or get_val("chunk_text")
-            if not text or not isinstance(text, str):
-                continue
-
-            metadata = get_val("metadata") or {}
-            if not isinstance(metadata, dict):
-                 metadata = {} # ensure dict
-                 
-            # Lift score/source into metadata if present at top level
-            if (score := get_val("score")) is not None:
-                metadata["score"] = score
-            if source := get_val("source"):
-                metadata["source"] = source
-            
-            doc_id = get_val("id") or get_val("doc_id")
-
-            documents.append(
-                RetrievedDocument(
-                    id=str(doc_id) if doc_id else None,
-                    text=text.strip(),
-                    metadata=metadata
-                )
-            )
-            
-        return documents[:limit]

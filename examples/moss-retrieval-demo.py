@@ -57,7 +57,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 # Import Moss retrieval service
 from src.client import MossClient
-from src.retrieval import MossRetrievalService, RetrievalService
+from src.retrieval import MossRetrievalService
 
 load_dotenv(override=True)
 
@@ -112,7 +112,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             index_name=index_name,
             top_k=top_k,
         ),
-        params=RetrievalService.Params(
+        params=MossRetrievalService.Params(
             system_prompt="Relevant passages from the Moss knowledge base:\n\n",
             add_as_system_message=True,
             deduplicate_queries=True,

@@ -101,7 +101,7 @@ from pipecat.runner.types import RunnerArguments
 
 # Import Moss integration
 from src.client import MossClient
-from src.retrieval import MossRetrievalService, RetrievalService
+from src.retrieval import MossRetrievalService
 
 load_dotenv()
 
@@ -132,7 +132,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             index_name=os.getenv("MOSS_INDEX_NAME", "pipecat-docs"),
             top_k=int(os.getenv("MOSS_TOP_K", 5)),
         ),
-        params=RetrievalService.Params(
+        params=MossRetrievalService.Params(
             system_prompt="Relevant passages from the Moss knowledge base:\n\n",
             add_as_system_message=True,
             deduplicate_queries=True,
@@ -214,7 +214,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 - `top_k` (default: 5): Number of documents to retrieve per query
 - `auto_load_index` (default: True): Automatically load index before querying
 
-### RetrievalService.Params
+### MossRetrievalService.Params
 
 - `system_prompt` (default: "Here is additional context retrieved from memory:\n\n"): Prefix for retrieved documents
 - `add_as_system_message` (default: True): Whether to add retrieved docs as a system message (vs user message)
@@ -230,7 +230,7 @@ You can reuse a `MossClient` instance across multiple services:
 
 ```python
 from src.client import MossClient
-from src.retrieval import MossRetrievalService, RetrievalService
+from src.retrieval import MossRetrievalService
 
 # Create a shared client (reads from env vars by default)
 client = MossClient()
@@ -325,7 +325,7 @@ Customize how retrieved documents are formatted:
 ```python
 retrieval = MossRetrievalService(
     config=MossRetrievalService.Config(index_name="pipecat-docs"),
-    params=RetrievalService.Params(
+    params=MossRetrievalService.Params(
         system_prompt="Based on the following documentation:\n\n",
         add_as_system_message=True,
     ),
@@ -339,7 +339,7 @@ You can add retrieved documents as a user message:
 ```python
 retrieval = MossRetrievalService(
     config=MossRetrievalService.Config(index_name="pipecat-docs"),
-    params=RetrievalService.Params(
+    params=MossRetrievalService.Params(
         add_as_system_message=False,  # Adds as user message instead
     ),
 )
