@@ -22,14 +22,9 @@ from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from .client import MossClient, SearchResult
 
-try:
-    from pipecat.processors.aggregators.openai_llm_context import (
-        OpenAILLMContext,
-        OpenAILLMContextFrame,
-    )
-except ImportError:  # pragma: no cover - optional dependency is always present in prod
-    OpenAILLMContext = LLMContext  # type: ignore
-    OpenAILLMContextFrame = LLMContextFrame  # type: ignore
+from pipecat.processors.aggregators.openai_llm_context import (
+    OpenAILLMContextFrame,
+)
 
 __all__ = ["MossRetrievalService"]
 
