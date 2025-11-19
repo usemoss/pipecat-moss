@@ -9,6 +9,7 @@ dependencies = [
     "loguru>=0.7.0",
     "pipecat-ai>=0.0.94",
     "pydantic>=2.0.0",
+    "pipecat-ai[runner]>=0.0.94",
 ]
 
 [dependency-groups]
@@ -19,7 +20,7 @@ dev = [
     "deepgram-sdk>=3.2.0,<5.0.0",
     "fastapi>=0.121.2",
     "opencv-python>=4.11.0.86",
-    "pipecat-ai[runner]>=0.0.94",
+    
     "python-dotenv>=1.2.1",
     "ruff>=0.1.0",
 ]
