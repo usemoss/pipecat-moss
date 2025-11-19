@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Sequence
 
 from loguru import logger
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 from pipecat.frames.frames import ErrorFrame, Frame, LLMContextFrame, LLMMessagesFrame, MetricsFrame
 from pipecat.metrics.metrics import ProcessingMetricsData
@@ -46,45 +46,38 @@ class RetrievedDocument(BaseModel):
 class MossRetrievalService(FrameProcessor):
     """Retrieval service backed by InferEdge Moss vector indexes."""
 
-    class Params(BaseModel):
-        """Configuration parameters for retrieval services."""
-
-        system_prompt: str = Field(
-            default="Here is additional context retrieved from memory:\n\n"
-        )
-        add_as_system_message: bool = True
-        deduplicate_queries: bool = True
-        max_documents: int = Field(default=5, ge=1)
-        max_document_chars: Optional[int] = Field(default=2000, ge=1)
-
-    class Config(BaseModel):
-        index_name: str
-        project_id: Optional[str] = None
-        project_key: Optional[str] = None
-        top_k: int = Field(default=5, ge=1)
-        auto_load_index: bool = True
-
-        @field_validator("index_name")
-        @classmethod
-        def _validate_index(cls, value: str) -> str:
-            if not value:
-                raise ValueError("index_name must be provided")
-            return value
-
     def __init__(
         self,
         *,
-        config: Config,
-        params: Optional[Params] = None,
+        index_name: str,
+        project_id: Optional[str] = None,
+        project_key: Optional[str] = None,
+        top_k: int = 5,
+        auto_load_index: bool = True,
+        system_prompt: str = "Here is additional context retrieved from memory:\n\n",
+        add_as_system_message: bool = True,
+        deduplicate_queries: bool = True,
+        max_documents: int = 5,
+        max_document_chars: Optional[int] = 2000,
         client: Optional[MossClient] = None,
         name: Optional[str] = None,
     ):
         super().__init__(name=name)
-        self._config = config
-        self._params = params or MossRetrievalService.Params()
+        if not index_name:
+            raise ValueError("index_name must be provided")
+
+        self._index_name = index_name
+        self._top_k = max(1, top_k)
+        self._auto_load_index = auto_load_index
+        self._system_prompt = system_prompt
+        self._add_as_system_message = add_as_system_message
+        self._deduplicate_queries = deduplicate_queries
+        self._max_documents = max(1, max_documents)
+        self._max_document_chars = max_document_chars
+
         self._client = client or MossClient(
-            project_id=config.project_id,
-            project_key=config.project_key,
+            project_id=project_id,
+            project_key=project_key,
         )
         self._last_query: Optional[str] = None
 
@@ -94,13 +87,13 @@ class MossRetrievalService(FrameProcessor):
     async def retrieve_documents(
         self, query: str, *, limit: int
     ) -> Sequence[RetrievedDocument]:
-        top_k = min(self._config.top_k, limit)
+        top_k = min(self._top_k, limit)
         try:
             result = await self._client.query(
-                self._config.index_name,
+                self._index_name,
                 query,
                 top_k=top_k,
-                auto_load=self._config.auto_load_index,
+                auto_load=self._auto_load_index,
             )
 
             if self.metrics_enabled:
@@ -120,45 +113,44 @@ class MossRetrievalService(FrameProcessor):
                             ]
                         )
                     )
-                else:
-                    logger.warning(f"{self}: 'time_taken_ms' missing or None in result.")
+
+            docs = getattr(result, "docs", []) or []
+            documents = []
+
+            for item in docs:
+                # Handle both dict-like and object-like items
+                is_dict = isinstance(item, dict)
+                get_val = lambda k: item.get(k) if is_dict else getattr(item, k, None)
+
+                text = get_val("text") or get_val("content") or get_val("chunk_text")
+                if not text or not isinstance(text, str):
+                    continue
+
+                metadata = get_val("metadata") or {}
+                if not isinstance(metadata, dict):
+                    metadata = {}
+
+                # Lift score/source into metadata if present at top level
+                if (score := get_val("score")) is not None:
+                    metadata["score"] = score
+                if source := get_val("source"):
+                    metadata["source"] = source
+
+                doc_id = get_val("id") or get_val("doc_id")
+
+                documents.append(
+                    RetrievedDocument(
+                        id=str(doc_id) if doc_id else None,
+                        text=text.strip(),
+                        metadata=metadata,
+                    )
+                )
+
+            return documents[:limit]
+
         except Exception as e:
             logger.error(f"{self}: Moss retrieval failed: {e}")
             return []
-
-        docs = getattr(result, "docs", []) or []
-        documents = []
-        
-        for item in docs:
-            # Handle both dict-like and object-like items
-            is_dict = isinstance(item, dict)
-            get_val = lambda k: item.get(k) if is_dict else getattr(item, k, None)
-            
-            text = get_val("text") or get_val("content") or get_val("chunk_text")
-            if not text or not isinstance(text, str):
-                continue
-
-            metadata = get_val("metadata") or {}
-            if not isinstance(metadata, dict):
-                 metadata = {} # ensure dict
-                 
-            # Lift score/source into metadata if present at top level
-            if (score := get_val("score")) is not None:
-                metadata["score"] = score
-            if source := get_val("source"):
-                metadata["source"] = source
-            
-            doc_id = get_val("id") or get_val("doc_id")
-
-            documents.append(
-                RetrievedDocument(
-                    id=str(doc_id) if doc_id else None,
-                    text=text.strip(),
-                    metadata=metadata
-                )
-            )
-            
-        return documents[:limit]
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         """Process frames to extract queries and augment LLM context with retrieved documents."""
@@ -186,13 +178,13 @@ class MossRetrievalService(FrameProcessor):
                 and not self._should_skip_query(latest_user_message)
             ):
                 documents = await self.retrieve_documents(
-                    latest_user_message, limit=self._params.max_documents
+                    latest_user_message, limit=self._max_documents
                 )
                 self._set_last_query(latest_user_message)
-                
+
                 if documents:
                     content = self._format_documents(documents)
-                    role = "system" if self._params.add_as_system_message else "user"
+                    role = "system" if self._add_as_system_message else "user"
                     context.add_message({"role": role, "content": content})
 
             await self._emit_context(frame, messages, context)
@@ -202,11 +194,11 @@ class MossRetrievalService(FrameProcessor):
             await self.push_error(ErrorFrame(error=f"{self} retrieval error: {exc}"))
 
     def _set_last_query(self, query: str):
-        if self._params.deduplicate_queries:
+        if self._deduplicate_queries:
             self._last_query = query
 
     def _should_skip_query(self, query: str) -> bool:
-        return bool(self._params.deduplicate_queries and self._last_query == query)
+        return bool(self._deduplicate_queries and self._last_query == query)
 
     async def _emit_context(
         self,
@@ -241,22 +233,24 @@ class MossRetrievalService(FrameProcessor):
         return None
 
     def _format_documents(self, documents: Sequence[RetrievedDocument]) -> str:
-        lines = [self._params.system_prompt.rstrip(), ""]
+        lines = [self._system_prompt.rstrip(), ""]
         for idx, document in enumerate(documents, start=1):
             suffix = ""
             if document.metadata:
                 extras = []
-                if source := (document.metadata.get("source") or document.metadata.get("origin")):
+                if source := (
+                    document.metadata.get("source") or document.metadata.get("origin")
+                ):
                     extras.append(f"source={source}")
                 if (score := document.metadata.get("score")) is not None:
                     extras.append(f"score={score}")
                 if extras:
                     suffix = f" ({', '.join(extras)})"
-            
+
             text = document.text
-            limit = self._params.max_document_chars
+            limit = self._max_document_chars
             if limit and len(text) > limit:
                 text = f"{text[:limit].rstrip()}…"
-                
+
             lines.append(f"{idx}. {text}{suffix}")
         return "\n".join(line for line in lines if line).strip()

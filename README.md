@@ -12,7 +12,15 @@ Moss is a vector database service that enables semantic search over your documen
 
 ## Installation
 
-Install the package using uv:
+To use this integration in your project, you can install it directly from source or copy the `src` directory.
+
+### Copy Source
+
+Copy the `src/` directory to your project and rename it to `pipecat_moss` (or keep as is and adjust imports).
+
+### Development
+
+To set up the development environment with all dependencies for running examples:
 
 ```bash
 uv sync
@@ -128,16 +136,12 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 
     # Configure Moss retrieval service (reuse the client instance)
     retrieval = MossRetrievalService(
-        config=MossRetrievalService.Config(
-            index_name=os.getenv("MOSS_INDEX_NAME", "pipecat-docs"),
-            top_k=int(os.getenv("MOSS_TOP_K", 5)),
-        ),
-        params=MossRetrievalService.Params(
-            system_prompt="Relevant passages from the Moss knowledge base:\n\n",
-            add_as_system_message=True,
-            deduplicate_queries=True,
-            max_documents=int(os.getenv("MOSS_TOP_K", 5)),
-        ),
+        index_name=os.getenv("MOSS_INDEX_NAME", "pipecat-docs"),
+        top_k=int(os.getenv("MOSS_TOP_K", 5)),
+        system_prompt="Relevant passages from the Moss knowledge base:\n\n",
+        add_as_system_message=True,
+        deduplicate_queries=True,
+        max_documents=int(os.getenv("MOSS_TOP_K", 5)),
         client=moss_client,  # Reuse the client instance
     )
 
@@ -206,16 +210,13 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 
 ## Configuration Options
 
-### MossRetrievalService.Config
+### MossRetrievalService
 
 - `index_name` (required): Name of your Moss index
 - `project_id` (optional): Moss project ID (can use env var `MOSS_PROJECT_ID`)
 - `project_key` (optional): Moss project key (can use env var `MOSS_PROJECT_KEY`)
 - `top_k` (default: 5): Number of documents to retrieve per query
 - `auto_load_index` (default: True): Automatically load index before querying
-
-### MossRetrievalService.Params
-
 - `system_prompt` (default: "Here is additional context retrieved from memory:\n\n"): Prefix for retrieved documents
 - `add_as_system_message` (default: True): Whether to add retrieved docs as a system message (vs user message)
 - `deduplicate_queries` (default: True): Skip retrieval if the query hasn't changed
@@ -237,12 +238,12 @@ client = MossClient()
 
 # Use it in multiple retrieval services
 retrieval1 = MossRetrievalService(
-    config=MossRetrievalService.Config(index_name="index1"),
+    index_name="index1",
     client=client,  # Reuse the client
 )
 
 retrieval2 = MossRetrievalService(
-    config=MossRetrievalService.Config(index_name="index2"),
+    index_name="index2",
     client=client,  # Same client instance
 )
 ```
@@ -324,11 +325,9 @@ Customize how retrieved documents are formatted:
 
 ```python
 retrieval = MossRetrievalService(
-    config=MossRetrievalService.Config(index_name="pipecat-docs"),
-    params=MossRetrievalService.Params(
-        system_prompt="Based on the following documentation:\n\n",
-        add_as_system_message=True,
-    ),
+    index_name="pipecat-docs",
+    system_prompt="Based on the following documentation:\n\n",
+    add_as_system_message=True,
 )
 ```
 
@@ -338,10 +337,8 @@ You can add retrieved documents as a user message:
 
 ```python
 retrieval = MossRetrievalService(
-    config=MossRetrievalService.Config(index_name="pipecat-docs"),
-    params=MossRetrievalService.Params(
-        add_as_system_message=False,  # Adds as user message instead
-    ),
+    index_name="pipecat-docs",
+    add_as_system_message=False,  # Adds as user message instead
 )
 ```
 

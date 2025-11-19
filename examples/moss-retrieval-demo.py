@@ -108,16 +108,12 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     top_k = int(os.getenv("MOSS_TOP_K", "3"))
 
     moss_retrieval = MossRetrievalService(
-        config=MossRetrievalService.Config(
-            index_name=index_name,
-            top_k=top_k,
-        ),
-        params=MossRetrievalService.Params(
-            system_prompt="Relevant passages from the Moss knowledge base:\n\n",
-            add_as_system_message=True,
-            deduplicate_queries=True,
-            max_documents=top_k,
-        ),
+        index_name=index_name,
+        top_k=top_k,
+        system_prompt="Relevant passages from the Moss knowledge base:\n\n",
+        add_as_system_message=True,
+        deduplicate_queries=True,
+        max_documents=top_k,
         client=moss_client,
     )
     logger.info(f"Moss retrieval service initialized (index: {index_name})")
