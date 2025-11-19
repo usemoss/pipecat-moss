@@ -5,8 +5,13 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "aiortc>=1.14.0",
     "cartesia>=2.0.17",
-    "deepgram-sdk>=5.3.0",
+    "daily-python>=0.21.0",
+    "deepgram-sdk>=3.2.0,<5.0.0",
+    "fastapi>=0.121.2",
     "inferedge-moss>=1.0.0b5",
-    "pipecat-ai>=0.0.94",
+    "opencv-python>=4.11.0.86",
+    "pipecat-ai[runner]>=0.0.94",
+    "python-dotenv>=1.2.1",
 ]

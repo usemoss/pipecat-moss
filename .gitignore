@@ -1,2 +1,3 @@
 examples/.env
 examples/.env.example
+__pycache__/

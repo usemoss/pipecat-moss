@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field, field_validator
 from pipecat.frames.frames import ErrorFrame, Frame, LLMContextFrame, LLMMessagesFrame
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
-from pipecat.services.moss.client import MossClient
+from .client import MossClient
 
 try:
     from pipecat.processors.aggregators.openai_llm_context import (
