@@ -1,6 +1,6 @@
 # InferEdge Moss Integration for Pipecat
 
-This integration enables Retrieval-Augmented Generation (RAG) in your Pipecat voice AI agents using InferEdge Moss vector search. The integration is authored and maintained by the Moss team (I work at Moss), so you can expect first-party support and regular updates as the platform evolves.
+This integration enables real-time Retrieval-Augmented Generation (RAG) in your Pipecat voice AI agents using Moss.
 
 ## Pipecat Compatibility
 
@@ -8,7 +8,9 @@ Tested with Pipecat v0.0.94. Please upgrade to this version (or newer) to ensure
 
 ## Overview
 
-Moss is a vector database service that enables semantic search over your documents. When integrated with Pipecat, it automatically retrieves relevant context from your knowledge base based on user queries and augments the LLM's context with this information, enabling your voice AI agents to answer questions using your custom knowledge base.
+Moss delivers real-time semantic search for conversational AI. Upload your data or documents to the Moss Portal and instantly enable sub-10ms retrieval anywhere (browser, edge, or cloud).
+
+When integrated with Pipecat, Moss automatically fetches the most relevant context from your knowledge base based on the user’s query, augmenting the LLM prompt on the fly. Your voice agents can now answer questions using your custom knowledge accurately and in real time.
 
 ## Installation
 
@@ -30,8 +32,8 @@ uv sync
 
 You'll need:
 
-1. A Moss project ID and project key (get them from [InferEdge Moss](https://inferedge.com))
-2. An existing Moss index with documents (or create one using the examples below)
+1. Moss project ID and project key (get them from [Moss Portal](https://portal.usemoss.dev))
+2. An existing Moss index with documents (or create one using the example below)
 3. Your API keys for other services (LLM, STT, TTS)
 
 ### Setting Up Environment Variables
