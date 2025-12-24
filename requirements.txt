@@ -1,0 +1,38 @@
+# Core pipecat-ai dependencies (prioritized versions)
+aiofiles>=24.1.0,<25
+aiohttp>=3.11.12,<4
+docstring_parser~=0.16
+loguru~=0.7.3
+Markdown>=3.7,<4
+nltk>=3.9.1,<4
+numpy>=1.26.4,<3
+Pillow>=11.1.0,<12
+protobuf~=5.29.3
+pydantic>=2.10.6,<3
+pyloudnorm~=0.1.1
+resampy~=0.4.3
+soxr~=0.5.0
+openai>=1.74.0,<3
+numba==0.61.2
+
+# pipecat-ai optional dependencies (runner)
+python-dotenv>=1.0.0,<2.0.0
+uvicorn>=0.32.0,<1.0.0
+fastapi>=0.115.6,<0.122.0
+pipecat-ai-small-webrtc-prebuilt>=1.0.0
+
+# pipecat-ai optional dependencies (deepgram)
+deepgram-sdk~=4.7.0
+
+# pipecat-ai optional dependencies (websockets-base)
+websockets>=13.1,<16.0
+
+# Project-specific dependencies
+inferedge-moss>=1.0.0b5
+pipecat-ai[deepgram,runner]>=0.0.94
+
+# Additional project dependencies
+questionary~=2.1.0
+synchronicity~=0.7.6
+toml~=0.10.2
+typer>=0.20.0,<1
