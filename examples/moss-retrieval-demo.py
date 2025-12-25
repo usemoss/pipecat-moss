@@ -63,51 +63,29 @@ load_dotenv(override=True)
 
 
 def create_llm_service():
-    """Create LLM service with Azure OpenAI or regular OpenAI support.
+    """Create an OpenAI-based LLM service.
+
+    This example only supports standard OpenAI configuration. Configuration is read
+    from the following environment variables:
+
+    - OPENAI_API_KEY: required
+    - OPENAI_BASE_URL: optional custom OpenAI-compatible endpoint
+    - OPENAI_MODEL: optional model name (defaults to "gpt-4")
 
     Returns:
-        An instance of OpenAILLMService configured for either Azure or standard OpenAI.
+        An instance of OpenAILLMService configured for standard OpenAI.
     """
-    # Check for Azure OpenAI configuration
-    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-    azure_api_key = os.getenv("AZURE_OPENAI_API_KEY") 
-    azure_deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
-    
-    if azure_endpoint and azure_api_key and azure_deployment:
-        logger.info("Using Azure OpenAI configuration")
-        azure_api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
-        
-        # Construct Azure OpenAI base URL
-        base_url = f"{azure_endpoint.rstrip('/')}/openai/deployments/{azure_deployment}"
-        
-        return OpenAILLMService(
-            api_key=azure_api_key,
-            base_url=base_url,
-            model=azure_deployment,
-            default_headers={
-                "api-version": azure_api_version
-            }
-        )
-    else:
-        logger.info("Using standard OpenAI configuration")
-        
-        # Get configuration for OpenAI (supports custom base_url and model)
-        api_key = os.getenv("OPENAI_API_KEY")
-        base_url = os.getenv("OPENAI_BASE_URL")  # Optional custom endpoint
-        model = os.getenv("OPENAI_MODEL", "gpt-4")  # Default to gpt-4 if not specified
-        
-        if base_url:
-            logger.info(f"Using custom OpenAI endpoint: {base_url}")
-            return OpenAILLMService(
-                api_key=api_key,
-                base_url=base_url,
-                model=model
-            )
-        else:
-            return OpenAILLMService(
-                api_key=api_key,
-                model=model
-            )
+    logger.info("Using standard OpenAI configuration")
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    base_url = os.getenv("OPENAI_BASE_URL")  # Optional custom endpoint
+    model = os.getenv("OPENAI_MODEL", "gpt-4")
+
+    if base_url:
+        logger.info(f"Using custom OpenAI endpoint: {base_url}")
+        return OpenAILLMService(api_key=api_key, base_url=base_url, model=model)
+
+    return OpenAILLMService(api_key=api_key, model=model)
 
 
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):

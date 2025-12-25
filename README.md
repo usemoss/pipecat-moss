@@ -1,4 +1,4 @@
-# InferEdge Moss Integration for Pipecat
+# Moss Integration for Pipecat
 
 This integration enables real-time Retrieval-Augmented Generation (RAG) in your Pipecat voice AI agents using Moss.
 
