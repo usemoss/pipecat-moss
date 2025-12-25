@@ -56,7 +56,7 @@ logger.info("All components loaded successfully!")
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # Import Moss retrieval service
-from src.client import MossClient
+from inferedge_moss import MossClient
 from src.retrieval import MossRetrievalService
 
 load_dotenv(override=True)
@@ -129,16 +129,15 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     llm = create_llm_service()
 
     # Moss Retrieval Setup
-    try:
-        moss_client = MossClient()
-    except (RuntimeError, ValueError) as exc:
-        raise RuntimeError(
-            "Unable to initialize MossClient. "
-            "Ensure `inferedge-moss` is installed and Moss credentials are set."
-        ) from exc
+    moss_project_id = os.getenv("MOSS_PROJECT_ID")
+    moss_project_key = os.getenv("MOSS_PROJECT_KEY")
+    moss_client = MossClient(project_id=moss_project_id, project_key=moss_project_key)
 
-    # Configure defaults if not set
+    # Ensure index name is defined and actually load the index (await async load)
     index_name = os.getenv("MOSS_INDEX_NAME", "faq-index-livekit")
+    await moss_client.load_index(index_name)
+
+    # Configure defaults
     top_k = int(os.getenv("MOSS_TOP_K", "3"))
 
     moss_retrieval = MossRetrievalService(

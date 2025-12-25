@@ -20,7 +20,7 @@ from pipecat.frames.frames import ErrorFrame, Frame, LLMContextFrame, LLMMessage
 from pipecat.metrics.metrics import ProcessingMetricsData
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
-from .client import MossClient, SearchResult
+from inferedge_moss import MossClient, SearchResult
 
 from pipecat.processors.aggregators.openai_llm_context import (
     OpenAILLMContextFrame,
@@ -40,7 +40,7 @@ class MossRetrievalService(FrameProcessor):
         self,
         *,
         index_name: str,
-        client: Optional[MossClient] = None,
+        client: MossClient = None,
         project_id: Optional[str] = None,
         project_key: Optional[str] = None,
         top_k: int = 5,
@@ -65,15 +65,14 @@ class MossRetrievalService(FrameProcessor):
         self._index_name = index_name
         self._top_k = max(1, top_k)
         self._system_prompt = system_prompt
-        
+
         # Configurable options with defaults
-        self._auto_load_index = kwargs.get("auto_load_index", True)
+        # behavior for loading indexes.
         self._add_as_system_message = kwargs.get("add_as_system_message", True)
         self._deduplicate_queries = kwargs.get("deduplicate_queries", True)
-        self._max_documents = max(1, kwargs.get("max_documents", 5))
         self._max_document_chars = kwargs.get("max_document_chars", 2000)
 
-        self._client = client or MossClient(project_id=project_id, project_key=project_key)
+        self._client = client
         self._last_query: Optional[str] = None
 
     def can_generate_metrics(self) -> bool:
@@ -85,23 +84,21 @@ class MossRetrievalService(FrameProcessor):
         return True
 
     async def retrieve_documents(
-        self, query: str, *, limit: int
+        self, query: str
     ) -> SearchResult:
         """Retrieve documents for a given query.
 
         Args:
             query: The search query string.
-            limit: Maximum number of documents to return.
 
         Returns:
             A SearchResult object containing the matching documents and metadata.
         """
-        top_k = min(self._top_k, limit)
+        top_k = self._top_k
         result = await self._client.query(
             self._index_name,
             query,
             top_k=top_k,
-            auto_load=self._auto_load_index,
         )
 
         if self.metrics_enabled:
@@ -155,7 +152,7 @@ class MossRetrievalService(FrameProcessor):
                 and not (self._deduplicate_queries and self._last_query == latest_user_message)
             ):
                 search_result = await self.retrieve_documents(
-                    latest_user_message, limit=self._max_documents
+                    latest_user_message
                 )
 
                 if self._deduplicate_queries:

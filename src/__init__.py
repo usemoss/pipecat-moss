@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .client import (
+from inferedge_moss import (
     AddDocumentsOptions,
     DocumentInfo,
     GetDocumentsOptions,

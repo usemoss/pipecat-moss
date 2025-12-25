@@ -55,7 +55,7 @@ Before using Moss in your pipeline, you need to create an index and populate it 
 
 ```python
 import os
-from src.client import MossClient, DocumentInfo
+from inferedge_moss import MossClient, DocumentInfo
 
 # Initialize the client (reads from MOSS_PROJECT_ID and MOSS_PROJECT_KEY env vars)
 client = MossClient()
@@ -110,7 +110,7 @@ from pipecat.runner.utils import create_transport
 from pipecat.runner.types import RunnerArguments
 
 # Import Moss integration
-from src.client import MossClient
+from inferedge_moss import MossClient
 from src.retrieval import MossRetrievalService
 
 load_dotenv()
@@ -232,7 +232,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 You can reuse a `MossClient` instance across multiple services:
 
 ```python
-from src.client import MossClient
+from inferedge_moss import MossClient
 from src.retrieval import MossRetrievalService
 
 # Create a shared client (reads from env vars by default)
@@ -255,7 +255,7 @@ retrieval2 = MossRetrievalService(
 Use `MossClient` to manage your indexes:
 
 ```python
-from src.client import MossClient, DocumentInfo, AddDocumentsOptions
+from inferedge_moss import MossClient, DocumentInfo, AddDocumentsOptions
 
 client = MossClient()
 
