@@ -16,10 +16,6 @@ Required AI services:
 - Deepgram (Speech-to-Text)
 - OpenAI (LLM)
 - Cartesia (Text-to-Speech)
-
-Run the bot using::
-
-    uv run bot.py
 """
 
 import os
@@ -53,36 +49,9 @@ from pipecat.transports.daily.transport import DailyParams
 logger.info("All components loaded successfully!")
 
 # Import Moss retrieval service
-from inferedge_moss import MossClient
 from pipecat_moss.retrieval import MossRetrievalService
 
 load_dotenv(override=True)
-
-
-def create_llm_service():
-    """Create an OpenAI-based LLM service.
-
-    This example only supports standard OpenAI configuration. Configuration is read
-    from the following environment variables:
-
-    - OPENAI_API_KEY: required
-    - OPENAI_BASE_URL: optional custom OpenAI-compatible endpoint
-    - OPENAI_MODEL: optional model name (defaults to "gpt-4")
-
-    Returns:
-        An instance of OpenAILLMService configured for standard OpenAI.
-    """
-    logger.info("Using standard OpenAI configuration")
-
-    api_key = os.getenv("OPENAI_API_KEY")
-    base_url = os.getenv("OPENAI_BASE_URL")  # Optional custom endpoint
-    model = os.getenv("OPENAI_MODEL", "gpt-4")
-
-    if base_url:
-        logger.info(f"Using custom OpenAI endpoint: {base_url}")
-        return OpenAILLMService(api_key=api_key, base_url=base_url, model=model)
-
-    return OpenAILLMService(api_key=api_key, model=model)
 
 
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
@@ -92,7 +61,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         transport: The transport layer to use (e.g., Daily, WebRTC).
         runner_args: Arguments for the pipeline runner.
     """
-    logger.info(f"Starting customer support bot")
+    logger.info("Starting customer support bot")
 
     stt = DeepgramSTTService(api_key=os.getenv("DEEPGRAM_API_KEY"))
 
@@ -101,30 +70,26 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         voice_id="71a7ad14-091c-4e8e-a314-022ece01c121",  # British Reading Lady
     )
 
-    llm = create_llm_service()
-
-    # Moss Retrieval Setup
-    moss_project_id = os.getenv("MOSS_PROJECT_ID")
-    moss_project_key = os.getenv("MOSS_PROJECT_KEY")
-    moss_client = MossClient(project_id=moss_project_id, project_key=moss_project_key)
-
-    # Ensure index name is defined and actually load the index (await async load)
-    index_name = os.getenv("MOSS_INDEX_NAME", "faq-index-livekit")
-    await moss_client.load_index(index_name)
+    llm = OpenAILLMService(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        model=os.getenv("OPENAI_MODEL", "gpt-4"),
+    )
 
     # Configure defaults
-    top_k = int(os.getenv("MOSS_TOP_K", "3"))
+    top_k = int(os.getenv("MOSS_TOP_K", "5"))
 
     moss_retrieval = MossRetrievalService(
-        index_name=index_name,
+        index_name=os.getenv("MOSS_INDEX_NAME"),
         top_k=top_k,
+        alpha=0.5,
         system_prompt="Relevant passages from the Moss knowledge base:\n\n",
         add_as_system_message=True,
         deduplicate_queries=True,
         max_documents=top_k,
-        client=moss_client,
+        project_id=os.getenv("MOSS_PROJECT_ID"),
+        project_key=os.getenv("MOSS_PROJECT_KEY"),
     )
-    logger.info(f"Moss retrieval service initialized (index: {index_name})")
+    logger.info(f"Moss retrieval service initialized (index: {os.getenv('MOSS_INDEX_NAME')})")
 
     # System prompt with semantic retrieval support
     system_content = """You are a helpful customer support voice assistant. Your role is to assist customers with their questions about orders, shipping, returns, payments, and general inquiries.
@@ -150,7 +115,7 @@ When relevant knowledge base information is provided, use it to give accurate an
     context_aggregator = llm.create_context_aggregator(context)
 
     rtvi = RTVIProcessor(config=RTVIConfig(config=[]))
-    
+
     pipeline = Pipeline([
         transport.input(),  # Transport user input
         rtvi,  # RTVI processor  
@@ -175,15 +140,18 @@ When relevant knowledge base information is provided, use it to give accurate an
 
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
-        logger.info(f"Customer connected to support")
+        logger.info("Customer connected to support")
         # Kick off the conversation with a customer support greeting
-        greeting = "A customer has just connected to customer support. Greet them warmly and ask how you can help them today."
+        greeting = (
+            "A customer has just connected to customer support. Greet them warmly and ask how you can help "
+            "them today."
+        )
         messages.append({"role": "system", "content": greeting})
         await task.queue_frames([LLMRunFrame()])
 
     @transport.event_handler("on_client_disconnected")
     async def on_client_disconnected(transport, client):
-        logger.info(f"Customer disconnected from support")
+        logger.info("Customer disconnected from support")
         await task.cancel()
 
     runner = PipelineRunner(handle_sigint=runner_args.handle_sigint)
@@ -197,10 +165,9 @@ async def bot(runner_args: RunnerArguments):
     Args:
         runner_args: Command line arguments parsed by the runner.
     """
-
     # Check required environment variables
     required_vars = ["DEEPGRAM_API_KEY", "CARTESIA_API_KEY", "OPENAI_API_KEY"]
-    
+
     missing_vars = [var for var in required_vars if not os.getenv(var)]
     if missing_vars:
         logger.error("Missing required environment variables:")

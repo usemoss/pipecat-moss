@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Initial release of `pipecat-moss` integration.
-- `MossClient` for interacting with InferEdge Moss API.
+- `MossClient` for interacting with Moss API.
 - `MossRetrievalService` for augmenting Pipecat LLM contexts with retrieved documents.
 - Example `moss-retrieval-demo.py` demonstrating a full voice pipeline with retrieval.
 

@@ -25,6 +25,8 @@ from inferedge_moss import MossClient, SearchResult
 from pipecat.processors.aggregators.openai_llm_context import (
     OpenAILLMContextFrame,
 )
+import os
+import asyncio
 
 __all__ = ["MossRetrievalService"]
 
@@ -39,11 +41,11 @@ class MossRetrievalService(FrameProcessor):
     def __init__(
         self,
         *,
-        index_name: str,
-        client: MossClient = None,
-        project_id: Optional[str] = None,
-        project_key: Optional[str] = None,
-        top_k: int = 5,
+        index_name: str = None,
+        project_id: str = None,
+        project_key: str = None,
+        top_k: int = None,
+        alpha: Optional[float] = None,
         system_prompt: str = "Here is additional context retrieved from database:\n\n",
         **kwargs,
     ):
@@ -51,10 +53,10 @@ class MossRetrievalService(FrameProcessor):
         
         Args:
             index_name: Name of the Moss index.
-            client: Existing MossClient (optional).
-            project_id: Moss project ID (optional).
-            project_key: Moss project key (optional).
+            project_id: Moss project ID.
+            project_key: Moss project key.
             top_k: Max results (default: 5).
+            alpha[optional]: blends semantic and keyword search result (default: 0.8).
             system_prompt: Context prefix.
             **kwargs: Additional options (deduplicate_queries, max_documents, etc).
         """
@@ -63,17 +65,30 @@ class MossRetrievalService(FrameProcessor):
             raise ValueError("index_name must be provided")
 
         self._index_name = index_name
-        self._top_k = max(1, top_k)
+        self.alpha = alpha
+        self._top_k = top_k
         self._system_prompt = system_prompt
 
         # Configurable options with defaults
-        # behavior for loading indexes.
-        self._add_as_system_message = kwargs.get("add_as_system_message", True)
-        self._deduplicate_queries = kwargs.get("deduplicate_queries", True)
-        self._max_document_chars = kwargs.get("max_document_chars", 2000)
+        self._add_as_system_message = kwargs.get("add_as_system_message", True) # if True, add retrieved docs as system message; else user message
+        self._deduplicate_queries = kwargs.get("deduplicate_queries", True) # if True, skip retrieval for repeated queries and force LLM to use existing context
+        self._max_document_chars = kwargs.get("max_document_chars", 2000) # max chars per document to include in context
 
-        self._client = client
+        self._client = MossClient(project_id=project_id, project_key=project_key)
+
+        # Fire the background task immediately
+        self._init_task = asyncio.create_task(self._load_index())
         self._last_query: Optional[str] = None
+
+    async def _load_index(self):
+        """Internal worker to load the index and handle startup errors."""
+        try:
+            logger.info(f"Background loading started for: {self._index_name}")
+            await self._client.load_index(self._index_name)
+            logger.info("Index loading complete.")
+        except Exception as e:
+            logger.error(f"Index failed to load in background: {e}")
+            raise e
 
     def can_generate_metrics(self) -> bool:
         """Check if the processor can generate metrics.
@@ -82,7 +97,7 @@ class MossRetrievalService(FrameProcessor):
             True, as this processor generates retrieval latency metrics.
         """
         return True
-
+    
     async def retrieve_documents(
         self, query: str
     ) -> SearchResult:
@@ -94,11 +109,15 @@ class MossRetrievalService(FrameProcessor):
         Returns:
             A SearchResult object containing the matching documents and metadata.
         """
-        top_k = self._top_k
+        # Wait for the background task to complete
+        await self._init_task
+
+        # Proceed with the query
         result = await self._client.query(
             self._index_name,
             query,
-            top_k=top_k,
+            top_k=self._top_k,
+            alpha=self.alpha,
         )
 
         if self.metrics_enabled:
