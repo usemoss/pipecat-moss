@@ -52,12 +52,9 @@ from pipecat.transports.daily.transport import DailyParams
 
 logger.info("All components loaded successfully!")
 
-# Add project root to path for our imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 # Import Moss retrieval service
 from inferedge_moss import MossClient
-from src.retrieval import MossRetrievalService
+from pipecat_moss.retrieval import MossRetrievalService
 
 load_dotenv(override=True)
 

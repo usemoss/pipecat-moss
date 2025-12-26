@@ -1,6 +1,6 @@
 [project]
 name = "pipecat-moss"
-version = "0.1.0"
+version = "0.0.1"
 description = "Moss vector search integration for Pipecat"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -52,3 +52,12 @@ quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = false

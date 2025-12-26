@@ -2077,7 +2077,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/6d/c8/19e9edb707581431c
 [[package]]
 name = "pipecat-moss"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "inferedge-moss" },
     { name = "loguru" },

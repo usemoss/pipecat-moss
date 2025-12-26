@@ -1,2 +1,5 @@
 examples/.env
 __pycache__/
+*.pyc
+src/pipecat_moss.egg-info/
+build/

@@ -1,4 +1,70 @@
 # Moss Integration for Pipecat
+# Moss integration for Pipecat
+
+This repository provides a small integration that connects Pipecat pipelines
+to InferEdge Moss for semantic retrieval (RAG). The package is laid out using
+the recommended "src" layout and is importable as `pipecat_moss` after
+installation.
+
+Key points:
+
+- Package import path: `pipecat_moss` (Python)
+- Project distribution name: `pipecat-moss` (PyPI / packaging)
+
+## Installation
+
+Install in editable (development) mode so examples import correctly:
+
+```bash
+pip install -e .
+```
+
+If you prefer a plain install:
+
+```bash
+pip install .
+```
+
+## Quick start
+
+1. Ensure your environment has the Moss credentials set (or provide them when
+     creating the client):
+
+```bash
+export MOSS_PROJECT_ID="your-project-id"
+export MOSS_PROJECT_KEY="your-project-key"
+```
+
+2. Example usage (Python):
+
+```python
+import os
+from inferedge_moss import MossClient
+from pipecat_moss.retrieval import MossRetrievalService
+
+moss_client = MossClient(
+        project_id=os.getenv("MOSS_PROJECT_ID"),
+        project_key=os.getenv("MOSS_PROJECT_KEY"),
+)
+
+retrieval = MossRetrievalService(index_name="your-index", client=moss_client)
+
+# Use `retrieval` as a processor in your Pipecat pipeline to augment LLM context.
+```
+
+## Examples
+
+See the `examples/` folder for a demo script. The example was updated to import
+the package as `pipecat_moss` so the module resolves after installation.
+
+## Developer notes
+
+- The package uses `setuptools` via `pyproject.toml` (PEP 517).
+- Build artifacts (e.g., `build/`, `dist/`, `src/*.egg-info`) are ignored by
+    default in `.gitignore`.
+
+If you want me to expand the README with API docs or usage examples, tell me
+which areas you want covered.
 
 This integration enables real-time Retrieval-Augmented Generation (RAG) in your Pipecat voice AI agents using Moss.
 
