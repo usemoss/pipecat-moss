@@ -50,7 +50,7 @@ class MossRetrievalService(FrameProcessor):
         **kwargs,
     ):
         """Initialize the Moss retrieval service.
-        
+
         Args:
             index_name: Name of the Moss index.
             project_id: Moss project ID.
@@ -70,9 +70,15 @@ class MossRetrievalService(FrameProcessor):
         self._system_prompt = system_prompt
 
         # Configurable options with defaults
-        self._add_as_system_message = kwargs.get("add_as_system_message", True) # if True, add retrieved docs as system message; else user message
-        self._deduplicate_queries = kwargs.get("deduplicate_queries", True) # if True, skip retrieval for repeated queries and force LLM to use existing context
-        self._max_document_chars = kwargs.get("max_document_chars", 2000) # max chars per document to include in context
+        self._add_as_system_message = kwargs.get(
+            "add_as_system_message", True
+        )  # if True, add retrieved docs as system message; else user message
+        self._deduplicate_queries = kwargs.get(
+            "deduplicate_queries", True
+        )  # if True, skip retrieval for repeated queries and force LLM to use existing context
+        self._max_document_chars = kwargs.get(
+            "max_document_chars", 2000
+        )  # max chars per document to include in context
 
         self._client = MossClient(project_id=project_id, project_key=project_key)
         logger.info(f"{self}: Authenticated Moss client.")
@@ -97,10 +103,8 @@ class MossRetrievalService(FrameProcessor):
             True, as this processor generates retrieval latency metrics.
         """
         return True
-    
-    async def retrieve_documents(
-        self, query: str
-    ) -> SearchResult:
+
+    async def retrieve_documents(self, query: str) -> SearchResult:
         """Retrieve documents for a given query.
 
         Args:
@@ -166,13 +170,10 @@ class MossRetrievalService(FrameProcessor):
             context_messages = context.get_messages()
             latest_user_message = self._get_latest_user_text(context_messages)
 
-            if (
-                latest_user_message
-                and not (self._deduplicate_queries and self._last_query == latest_user_message)
+            if latest_user_message and not (
+                self._deduplicate_queries and self._last_query == latest_user_message
             ):
-                search_result = await self.retrieve_documents(
-                    latest_user_message
-                )
+                search_result = await self.retrieve_documents(latest_user_message)
 
                 if self._deduplicate_queries:
                     self._last_query = latest_user_message
@@ -211,9 +212,7 @@ class MossRetrievalService(FrameProcessor):
                     return content.strip()
                 # Simplified list handling (assumes standard structure)
                 if isinstance(content, list):
-                    return "\n".join(
-                        c["text"] for c in content if c.get("type") == "text"
-                    ).strip()
+                    return "\n".join(c["text"] for c in content if c.get("type") == "text").strip()
         return None
 
     def _format_documents(self, documents: Sequence[Any]) -> str:
@@ -230,18 +229,18 @@ class MossRetrievalService(FrameProcessor):
             # Trust the object structure from our own library
             meta = doc.metadata or {}
             extras = []
-            
+
             if source := meta.get("source"):
                 extras.append(f"source={source}")
-            
+
             if (score := getattr(doc, "score", None)) is not None:
                 extras.append(f"score={score}")
 
             suffix = f" ({', '.join(extras)})" if extras else ""
-            
+
             text = doc.text
             if self._max_document_chars and len(text) > self._max_document_chars:
-                text = f"{text[:self._max_document_chars].rstrip()}…"
+                text = f"{text[: self._max_document_chars].rstrip()}…"
 
             lines.append(f"{idx}. {text}{suffix}")
         return "\n".join(lines).strip()

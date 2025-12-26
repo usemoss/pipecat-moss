@@ -116,17 +116,19 @@ When relevant knowledge base information is provided, use it to give accurate an
 
     rtvi = RTVIProcessor(config=RTVIConfig(config=[]))
 
-    pipeline = Pipeline([
-        transport.input(),  # Transport user input
-        rtvi,  # RTVI processor  
-        stt,  # Speech-to-text
-        context_aggregator.user(),  # User responses
-        moss_retrieval,  # Moss retrieval (intercepts LLM messages)
-        llm,  # LLM (receives enhanced context)
-        tts,  # Text-to-speech
-        transport.output(),  # Transport bot output
-        context_aggregator.assistant(),  # Assistant spoken responses
-    ])
+    pipeline = Pipeline(
+        [
+            transport.input(),  # Transport user input
+            rtvi,  # RTVI processor
+            stt,  # Speech-to-text
+            context_aggregator.user(),  # User responses
+            moss_retrieval,  # Moss retrieval (intercepts LLM messages)
+            llm,  # LLM (receives enhanced context)
+            tts,  # Text-to-speech
+            transport.output(),  # Transport bot output
+            context_aggregator.assistant(),  # Assistant spoken responses
+        ]
+    )
 
     task = PipelineTask(
         pipeline,
