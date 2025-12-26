@@ -10,9 +10,9 @@ A voice AI customer support assistant that:
 - Uses OpenAI for intelligent responses
 - Searches knowledge base using Moss semantic retrieval
 - Supports real-time voice conversations
-- Follows official Pipecat quickstart pattern
 
 Required AI services:
+- Moss (Semantic Retrieval)
 - Deepgram (Speech-to-Text)
 - OpenAI (LLM)
 - Cartesia (Text-to-Speech)

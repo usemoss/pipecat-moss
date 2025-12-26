@@ -32,7 +32,7 @@ __all__ = ["MossRetrievalService"]
 
 
 class MossRetrievalService(FrameProcessor):
-    """Retrieval service backed by InferEdge Moss vector indexes.
+    """Retrieval service backed by Moss vector indexes.
 
     Intercepts LLM context frames to augment them with relevant documents
     retrieved from a Moss vector index based on the user's latest query.
@@ -75,7 +75,7 @@ class MossRetrievalService(FrameProcessor):
         self._max_document_chars = kwargs.get("max_document_chars", 2000) # max chars per document to include in context
 
         self._client = MossClient(project_id=project_id, project_key=project_key)
-
+        logger.info(f"{self}: Authenticated Moss client.")
         # Fire the background task immediately
         self._init_task = asyncio.create_task(self._load_index())
         self._last_query: Optional[str] = None

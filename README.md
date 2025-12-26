@@ -28,6 +28,7 @@ from pipecat_moss.retrieval import MossRetrievalService
 moss_retrieval = MossRetrievalService(
     index_name=os.getenv("MOSS_INDEX_NAME"),
     top_k=top_k,
+    alpha=0.8,
     system_prompt="Relevant passages from the Moss knowledge base:\n\n",
     max_documents=top_k,
     project_id=os.getenv("MOSS_PROJECT_ID"),
@@ -60,6 +61,7 @@ To set up the development environment with all dependencies for running examples
 
 ```bash
 uv sync
+source .venv/bin/activate # Activate the virtual environment
 ```
 
 ### Setup Environment Variables
