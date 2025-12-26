@@ -12,21 +12,19 @@ LLM context with relevant documents retrieved from memory or vector databases.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence
+import asyncio
+from collections.abc import Sequence
+from typing import Any
 
+from inferedge_moss import MossClient, SearchResult
 from loguru import logger
-
 from pipecat.frames.frames import ErrorFrame, Frame, LLMContextFrame, LLMMessagesFrame, MetricsFrame
 from pipecat.metrics.metrics import ProcessingMetricsData
 from pipecat.processors.aggregators.llm_context import LLMContext
-from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
-from inferedge_moss import MossClient, SearchResult
-
 from pipecat.processors.aggregators.openai_llm_context import (
     OpenAILLMContextFrame,
 )
-import os
-import asyncio
+from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 
 __all__ = ["MossRetrievalService"]
 
@@ -45,7 +43,7 @@ class MossRetrievalService(FrameProcessor):
         project_id: str = None,
         project_key: str = None,
         top_k: int = None,
-        alpha: Optional[float] = None,
+        alpha: float | None = None,
         system_prompt: str = "Here is additional context retrieved from database:\n\n",
         **kwargs,
     ):
@@ -84,7 +82,7 @@ class MossRetrievalService(FrameProcessor):
         logger.info(f"{self}: Authenticated Moss client.")
         # Fire the background task immediately
         self._init_task = asyncio.create_task(self._load_index())
-        self._last_query: Optional[str] = None
+        self._last_query: str | None = None
 
     async def _load_index(self):
         """Internal worker to load the index and handle startup errors."""
@@ -196,7 +194,7 @@ class MossRetrievalService(FrameProcessor):
             await self.push_error(ErrorFrame(error=f"{self} retrieval error: {exc}"))
 
     @staticmethod
-    def _get_latest_user_text(messages: Sequence[Dict[str, Any]]) -> Optional[str]:
+    def _get_latest_user_text(messages: Sequence[dict[str, Any]]) -> str | None:
         """Extract the text content from the latest user message.
 
         Args:

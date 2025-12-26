@@ -10,6 +10,7 @@ from inferedge_moss import (
     MossClient,
     SearchResult,
 )
+
 from .retrieval import MossRetrievalService
 
 __all__ = [

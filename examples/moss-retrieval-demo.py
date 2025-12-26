@@ -19,25 +19,17 @@ Required AI services:
 """
 
 import os
-import sys
 
 from dotenv import load_dotenv
 from loguru import logger
-from pipecat.frames.frames import LLMRunFrame
-
-print("Starting Customer Support Voice AI Bot...")
-print("Loading models and imports (20 seconds first run only)\n")
-
-logger.info("Loading Silero VAD model...")
 from pipecat.audio.vad.silero import SileroVADAnalyzer
-
-logger.info("Silero VAD model loaded")
-logger.info("Loading pipeline components...")
+from pipecat.frames.frames import LLMRunFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
 from pipecat.processors.frameworks.rtvi import RTVIConfig, RTVIObserver, RTVIProcessor
+from pipecat.runner.run import main as runner_main
 from pipecat.runner.types import RunnerArguments
 from pipecat.runner.utils import create_transport
 from pipecat.services.cartesia.tts import CartesiaTTSService
@@ -46,21 +38,17 @@ from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
 
-logger.info("All components loaded successfully!")
-
-# Import Moss retrieval service
 from pipecat_moss.retrieval import MossRetrievalService
 
 load_dotenv(override=True)
 
+# You can keep these log messages if you want them to appear
+# immediately after the script starts (post-import).
+print("Starting Customer Support Voice AI Bot...")
+logger.info("All components loaded successfully!")
 
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
-    """Run the customer support bot pipeline.
-
-    Args:
-        transport: The transport layer to use (e.g., Daily, WebRTC).
-        runner_args: Arguments for the pipeline runner.
-    """
+    """Run the customer support bot pipeline."""
     logger.info("Starting customer support bot")
 
     stt = DeepgramSTTService(api_key=os.getenv("DEEPGRAM_API_KEY"))
@@ -162,11 +150,7 @@ When relevant knowledge base information is provided, use it to give accurate an
 
 
 async def bot(runner_args: RunnerArguments):
-    """Main bot entry point for the customer support bot.
-
-    Args:
-        runner_args: Command line arguments parsed by the runner.
-    """
+    """Main bot entry point for the customer support bot."""
     # Check required environment variables
     required_vars = ["DEEPGRAM_API_KEY", "CARTESIA_API_KEY", "OPENAI_API_KEY"]
 
@@ -198,6 +182,4 @@ async def bot(runner_args: RunnerArguments):
 
 
 if __name__ == "__main__":
-    from pipecat.runner.run import main
-
-    main()
+    runner_main()

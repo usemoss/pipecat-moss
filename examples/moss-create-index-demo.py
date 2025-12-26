@@ -1,15 +1,15 @@
-import os
 import asyncio
-from inferedge_moss import MossClient, DocumentInfo
+import os
+
 from dotenv import load_dotenv
+from inferedge_moss import DocumentInfo, MossClient
 from loguru import logger
 
 load_dotenv()
 
 
 async def upload_documents():
-    """
-    Upload documents to the Moss index.
+    """Upload documents to the Moss index.
 
     This function creates an index in the Moss service with the provided documents.
     """

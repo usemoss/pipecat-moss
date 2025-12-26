@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 src/pipecat_moss.egg-info/
 build/
+.env
+.ruff_cache/
+.venv/
