@@ -44,9 +44,9 @@ class MossIndexProcessor(FrameProcessor):
         self._top_k = top_k
         self._alpha = alpha
         self._system_prompt = system_prompt
-        self._add_as_system_message = add_as_system_message # If True add retrieved context as system message; else as user message
-        self._deduplicate_queries = deduplicate_queries # If True, skip retrieval for repeated queries
-        self._max_document_chars = max_document_chars # Max chars per retrieved document
+        self._add_as_system_message = add_as_system_message  # If True add retrieved context as system message; else as user message
+        self._deduplicate_queries = deduplicate_queries  # If True, skip retrieval for repeated queries
+        self._max_document_chars = max_document_chars  # Max chars per retrieved document
         self._last_query: str | None = None
 
     def can_generate_metrics(self) -> bool:

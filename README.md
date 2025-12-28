@@ -86,7 +86,7 @@ Or pass them directly when creating the MossRetrievalService.
 Before using Moss in your pipeline, you need to create an index and populate it with documents:
 
 ```bash
-python examples/moss-createIndex-demo.py
+python examples/moss-create-index-demo.py
 ```
 
 ### Run the Example
