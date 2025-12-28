@@ -22,24 +22,25 @@ Pipecat-Moss integrates seamlessly into a Pipecat pipeline, enabling efficient r
 
 ```python
 import os
-from inferedge_moss import MossClient
-from pipecat_moss.retrieval import MossRetrievalService
+from pipecat_moss import MossRetrievalService
 
-moss_retrieval = MossRetrievalService(
-    index_name=os.getenv("MOSS_INDEX_NAME"),
-    top_k=top_k,
-    alpha=0.8,
-    system_prompt="Relevant passages from the Moss knowledge base:\n\n",
-    max_documents=top_k,
+moss_service = MossRetrievalService(
     project_id=os.getenv("MOSS_PROJECT_ID"),
     project_key=os.getenv("MOSS_PROJECT_KEY"),
+    top_k=3,
+    system_prompt="Relevant passages from the Moss knowledge base:\n\n",
 )
+
+
+async def setup_indexes():
+    await moss_service.load_index(os.getenv("MOSS_INDEX_NAME"))
+
 
 pipeline = Pipeline([
     transport.input(),               # audio/user input
     stt,                             # speech to text
     context_aggregator.user(),       # add user text to context
-    retrieval_service,               # Moss retrieval service
+    moss_service.query(os.getenv("MOSS_INDEX_NAME")),  # retrieve relevant docs from Moss
     llm,                             # LLM generates response
     tts,                             # TTS synthesis
     transport.output(),              # stream audio back to user
@@ -47,7 +48,7 @@ pipeline = Pipeline([
 ])
 ```
 
-See `examples/moss-retrieval-demo.py` for a complete working example.
+`setup_indexes()` must be awaited before the pipeline starts so the service can load the Moss index. See `examples/moss-retrieval-demo.py` for a complete working example.
 
 ## Pipecat Compatibility
 
@@ -55,7 +56,7 @@ Tested with Pipecat v0.0.94. Please upgrade to this version (or newer) to ensure
 
 ## Running the Example
 
-### Install dependencies:
+### Install Dependencies
 
 To set up the development environment with all dependencies for running examples:
 
@@ -65,6 +66,7 @@ source .venv/bin/activate # Activate the virtual environment
 ```
 
 ### Setup Environment Variables
+
 Create a `.env` file in the root directory with the following content:
 
 ```env
@@ -84,10 +86,10 @@ Or pass them directly when creating the MossRetrievalService.
 Before using Moss in your pipeline, you need to create an index and populate it with documents:
 
 ```bash
-python examples/moss-CreateIndex-demo.py
+python examples/moss-createIndex-demo.py
 ```
 
-### Run the example:
+### Run the Example
 
 ```bash
 python examples/moss-retrieval-demo.py
@@ -97,14 +99,18 @@ python examples/moss-retrieval-demo.py
 
 ### MossRetrievalService
 
-- `index_name` (required): Name of your Moss index
 - `project_id` (required): Moss project ID (can use env var `MOSS_PROJECT_ID`)
 - `project_key` (required): Moss project key (can use env var `MOSS_PROJECT_KEY`)
-- `top_k` (default: 5): Number of documents to retrieve per query
-- `alpha` (default: 0.8): Blends semantic and keyword search results (0.0 = keyword only, 1.0 = semantic only)
-- `system_prompt` (default: "Here is additional context retrieved from memory:\n\n"): Prefix for retrieved documents
-- `add_as_system_message` (default: True): Whether to add retrieved docs as a system message (vs user message)
-- `deduplicate_queries` (default: True): Skip retrieval if the query hasn't changed
+- `top_k` (default: 5): Default number of documents to retrieve per query
+- `alpha` (default: 0.8): Default semantic/keyword blend (0.0 = keyword only, 1.0 = semantic only)
+- `system_prompt` (default: "Here is additional context retrieved from database:\n\n"): Default prefix for retrieved documents
+- `load_index(index_name)`: Awaitable method that loads the given index before the pipeline runs
+- `query(index_name, **overrides)`: Returns a FrameProcessor for the specified index; you can override `top_k`, `alpha`, `system_prompt`, etc. per pipeline step
+
+### MossIndexProcessor (returned from `query()`)
+
+- `add_as_system_message` (default: True): Whether retrieval results become a system message (vs user message)
+- `deduplicate_queries` (default: True): Skip retrieval if the latest user message matches the previous query
 - `max_document_chars` (default: 2000): Maximum characters per document (longer documents are truncated)
 
 ## License

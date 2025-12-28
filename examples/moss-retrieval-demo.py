@@ -38,60 +38,67 @@ from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
 
-from pipecat_moss.retrieval import MossRetrievalService
+from pipecat_moss import MossRetrievalService
 
+# Load environment variables from .env file
 load_dotenv(override=True)
 
-# You can keep these log messages if you want them to appear
-# immediately after the script starts (post-import).
 print("Starting Customer Support Voice AI Bot...")
 logger.info("All components loaded successfully!")
 
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     """Run the customer support bot pipeline."""
+
+    # Initialize stt, tts, llm services
     logger.info("Starting customer support bot")
-
     stt = DeepgramSTTService(api_key=os.getenv("DEEPGRAM_API_KEY"))
-
     tts = CartesiaTTSService(
         api_key=os.getenv("CARTESIA_API_KEY"),
         voice_id="71a7ad14-091c-4e8e-a314-022ece01c121",  # British Reading Lady
     )
-
     llm = OpenAILLMService(
         api_key=os.getenv("OPENAI_API_KEY"),
         model=os.getenv("OPENAI_MODEL", "gpt-4"),
     )
 
-    # Configure defaults
+    # Configure Moss retrieval credentials and settings
+    project_id = os.getenv("MOSS_PROJECT_ID")
+    project_key = os.getenv("MOSS_PROJECT_KEY")
+    index_name = os.getenv("MOSS_INDEX_NAME")
     top_k = int(os.getenv("MOSS_TOP_K", "5"))
 
-    moss_retrieval = MossRetrievalService(
-        index_name=os.getenv("MOSS_INDEX_NAME"),
+    moss_service = MossRetrievalService(
+        project_id=project_id,
+        project_key=project_key,
         top_k=top_k,
         alpha=0.5,
         system_prompt="Relevant passages from the Moss knowledge base:\n\n",
         add_as_system_message=True,
         deduplicate_queries=True,
-        max_documents=top_k,
-        project_id=os.getenv("MOSS_PROJECT_ID"),
-        project_key=os.getenv("MOSS_PROJECT_KEY"),
     )
-    logger.info(f"Moss retrieval service initialized (index: {os.getenv('MOSS_INDEX_NAME')})")
+
+    # Load the Moss index
+    await moss_service.load_index(index_name)
+    logger.info(f"Moss retrieval service initialized (index: {index_name})")
 
     # System prompt with semantic retrieval support
-    system_content = """You are a helpful customer support voice assistant. Your role is to assist customers with their questions about orders, shipping, returns, payments, and general inquiries.
+    system_content = """You are a helpful customer support voice assistant.
+Your role is to assist customers with their questions about orders, shipping,
+returns, payments, and general inquiries.
 
 Guidelines:
 - Be friendly, professional, and concise in your responses
 - Keep responses conversational since this is a voice interface
 - Use any provided knowledge base context to give accurate, helpful answers
-- If you don't have specific information, acknowledge this and offer to connect them with a human agent
+- If you don't have specific information,
+  acknowledge this and offer to connect them with a human agent
 - Ask clarifying questions if the customer's request is unclear
 - Always prioritize customer satisfaction and be empathetic
 
-When relevant knowledge base information is provided, use it to give accurate and detailed responses."""
+When relevant knowledge base information is provided,
+use it to give accurate and detailed responses."""
 
+    # Initialize conversation context and pipeline components
     messages = [
         {
             "role": "system",
@@ -101,16 +108,16 @@ When relevant knowledge base information is provided, use it to give accurate an
 
     context = OpenAILLMContext(messages)
     context_aggregator = llm.create_context_aggregator(context)
-
     rtvi = RTVIProcessor(config=RTVIConfig(config=[]))
 
+    # Build the processing pipeline with Moss Information injection
     pipeline = Pipeline(
         [
             transport.input(),  # Transport user input
             rtvi,  # RTVI processor
             stt,  # Speech-to-text
             context_aggregator.user(),  # User responses
-            moss_retrieval,  # Moss retrieval (intercepts LLM messages)
+            moss_service.query(index_name, top_k=top_k),  # Moss retrieval
             llm,  # LLM (receives enhanced context)
             tts,  # Text-to-speech
             transport.output(),  # Transport bot output
@@ -118,6 +125,7 @@ When relevant knowledge base information is provided, use it to give accurate an
         ]
     )
 
+    # Create and configure the pipeline task
     task = PipelineTask(
         pipeline,
         params=PipelineParams(
@@ -128,13 +136,14 @@ When relevant knowledge base information is provided, use it to give accurate an
         observers=[RTVIObserver(rtvi)],
     )
 
+    # Define transport event handlers
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
         logger.info("Customer connected to support")
         # Kick off the conversation with a customer support greeting
         greeting = (
-            "A customer has just connected to customer support. Greet them warmly and ask how you can help "
-            "them today."
+            "A customer has just connected to customer support. Greet them warmly and ask how you "
+            "can help them today."
         )
         messages.append({"role": "system", "content": greeting})
         await task.queue_frames([LLMRunFrame()])
@@ -148,11 +157,18 @@ When relevant knowledge base information is provided, use it to give accurate an
 
     await runner.run(task)
 
-
+# Runner entry point
 async def bot(runner_args: RunnerArguments):
     """Main bot entry point for the customer support bot."""
     # Check required environment variables
-    required_vars = ["DEEPGRAM_API_KEY", "CARTESIA_API_KEY", "OPENAI_API_KEY"]
+    required_vars = [
+        "DEEPGRAM_API_KEY",
+        "CARTESIA_API_KEY",
+        "OPENAI_API_KEY",
+        "MOSS_PROJECT_ID",
+        "MOSS_PROJECT_KEY",
+        "MOSS_INDEX_NAME",
+    ]
 
     missing_vars = [var for var in required_vars if not os.getenv(var)]
     if missing_vars:
@@ -161,6 +177,7 @@ async def bot(runner_args: RunnerArguments):
             logger.error(f"   - {var}")
         logger.error("\nPlease update your .env file with the required API keys")
         logger.error("Get your OpenAI API key from: https://platform.openai.com/")
+        logger.error("Get your Moss credentials from: https://portal.usemoss.dev")
         return
 
     transport_params = {

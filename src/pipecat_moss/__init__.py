@@ -11,7 +11,8 @@ from inferedge_moss import (
     SearchResult,
 )
 
-from .retrieval import MossRetrievalService
+from .moss_index_processor import MossIndexProcessor
+from .moss_retrieval_service import MossRetrievalService
 
 __all__ = [
     "AddDocumentsOptions",
