@@ -22,6 +22,7 @@ Pipecat-Moss integrates seamlessly into a Pipecat pipeline, enabling efficient r
 
 ```python
 import os
+import asyncio
 from pipecat_moss import MossRetrievalService
 
 moss_service = MossRetrievalService(
@@ -35,6 +36,7 @@ moss_service = MossRetrievalService(
 async def setup_indexes():
     await moss_service.load_index(os.getenv("MOSS_INDEX_NAME"))
 
+asyncio.run(setup_indexes())
 
 pipeline = Pipeline([
     transport.input(),               # audio/user input
