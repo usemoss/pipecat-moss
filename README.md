@@ -111,11 +111,6 @@ python examples/moss-retrieval-demo.py
 - `load_index(index_name)`: Awaitable method that loads the given index before the pipeline runs
 - `query(index_name, *, top_k=5, alpha=0.8)`: Returns a `MossIndexProcessor` for the specified index; `top_k` controls result count, `alpha` blends semantic vs keyword scoring (0.0 keyword-only, 1.0 semantic-only)
 
-### MossIndexProcessor (returned from `query()`)
-
-- Inherits the `system_prompt`, `add_as_system_message`, `deduplicate_queries`, and `max_document_chars` values supplied to `MossRetrievalService`
-- Exposes the configured `top_k` and `alpha` values for the active query
-
 ## License
 
 This integration is provided under a permissive open source license (BSD-2 or equivalent).
