@@ -24,19 +24,17 @@ class MossRetrievalService:
         *,
         project_id: str | None = None,
         project_key: str | None = None,
-        top_k: int = 5,
-        alpha: float = 0.8,
         system_prompt: str = "Here is additional context retrieved from database:\n\n",
-        **kwargs,
+        add_as_system_message: bool = True,
+        deduplicate_queries: bool = True,
+        max_document_chars: int = 2000,
     ):
         """Store shared client and default retrieval settings."""
         self._client = MossClient(project_id=project_id, project_key=project_key)
-        self._defaults = {
-            "top_k": top_k,
-            "alpha": alpha,
-            "system_prompt": system_prompt,
-            **kwargs,
-        }
+        self._system_prompt = system_prompt
+        self._add_as_system_message = add_as_system_message
+        self._deduplicate_queries = deduplicate_queries
+        self._max_document_chars = max_document_chars
         logger.info(f"Initialized MossRetrievalService for project: {project_id}")
 
     async def load_index(self, index_name: str):
@@ -49,13 +47,21 @@ class MossRetrievalService:
             logger.error(f"Failed to load index {index_name}: {exc}")
             raise exc
 
-    def query(self, index_name: str, **kwargs) -> MossIndexProcessor:
+    def query(
+        self,
+        index_name: str,
+        *,
+        top_k: int = 5,
+        alpha: float = 0.8,
+    ) -> MossIndexProcessor:
         """Create a pipeline processor for a specific Moss index."""
-        config = self._defaults.copy()
-        config.update(kwargs)
-
         return MossIndexProcessor(
             client=self._client,
             index_name=index_name,
-            **config,
+            top_k=top_k,
+            alpha=alpha,
+            system_prompt=self._system_prompt,
+            add_as_system_message=self._add_as_system_message,
+            deduplicate_queries=self._deduplicate_queries,
+            max_document_chars=self._max_document_chars,
         )

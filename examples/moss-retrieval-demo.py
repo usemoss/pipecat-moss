@@ -70,8 +70,6 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     moss_service = MossRetrievalService(
         project_id=project_id,
         project_key=project_key,
-        top_k=top_k,
-        alpha=0.5,
         system_prompt="Relevant passages from the Moss knowledge base:\n\n",
         add_as_system_message=True,
         deduplicate_queries=True,
@@ -117,7 +115,7 @@ use it to give accurate and detailed responses."""
             rtvi,  # RTVI processor
             stt,  # Speech-to-text
             context_aggregator.user(),  # User responses
-            moss_service.query(index_name, top_k=top_k),  # Moss retrieval
+            moss_service.query(index_name, top_k=top_k, alpha=0.5),  # Moss retrieval
             llm,  # LLM (receives enhanced context)
             tts,  # Text-to-speech
             transport.output(),  # Transport bot output

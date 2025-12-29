@@ -78,7 +78,7 @@ async def upload_documents():
         await client.create_index(
             index_name=os.getenv("MOSS_INDEX_NAME"),
             docs=documents,
-            model_id=os.getenv("MOSS_EMBEDDING_MODEL_ID", "moss-minilm"),
+            model_id="moss-minilm",
         )
         logger.success("Index created successfully.")
 

@@ -28,8 +28,9 @@ from pipecat_moss import MossRetrievalService
 moss_service = MossRetrievalService(
     project_id=os.getenv("MOSS_PROJECT_ID"),
     project_key=os.getenv("MOSS_PROJECT_KEY"),
-    top_k=3,
     system_prompt="Relevant passages from the Moss knowledge base:\n\n",
+    add_as_system_message=True,
+    deduplicate_queries=True,
 )
 
 
@@ -42,7 +43,7 @@ pipeline = Pipeline([
     transport.input(),               # audio/user input
     stt,                             # speech to text
     context_aggregator.user(),       # add user text to context
-    moss_service.query(os.getenv("MOSS_INDEX_NAME")),  # retrieve relevant docs from Moss
+    moss_service.query(os.getenv("MOSS_INDEX_NAME"), top_k=3, alpha=0.8),  # retrieve relevant docs from Moss
     llm,                             # LLM generates response
     tts,                             # TTS synthesis
     transport.output(),              # stream audio back to user
@@ -103,17 +104,17 @@ python examples/moss-retrieval-demo.py
 
 - `project_id` (required): Moss project ID (can use env var `MOSS_PROJECT_ID`)
 - `project_key` (required): Moss project key (can use env var `MOSS_PROJECT_KEY`)
-- `top_k` (default: 5): Default number of documents to retrieve per query
-- `alpha` (default: 0.8): Default semantic/keyword blend (0.0 = keyword only, 1.0 = semantic only)
-- `system_prompt` (default: "Here is additional context retrieved from database:\n\n"): Default prefix for retrieved documents
+- `system_prompt` (default: "Here is additional context retrieved from database:\n\n"): Prefix added ahead of retrieved documents
+- `add_as_system_message` (default: True): Whether retrieval results are injected as system messages instead of user messages
+- `deduplicate_queries` (default: True): Skip retrieval when the latest query matches the previous one
+- `max_document_chars` (default: 2000): Maximum characters per retrieved document (longer docs are truncated)
 - `load_index(index_name)`: Awaitable method that loads the given index before the pipeline runs
-- `query(index_name, **overrides)`: Returns a FrameProcessor for the specified index; you can override `top_k`, `alpha`, `system_prompt`, etc. per pipeline step
+- `query(index_name, *, top_k=5, alpha=0.8)`: Returns a `MossIndexProcessor` for the specified index; `top_k` controls result count, `alpha` blends semantic vs keyword scoring (0.0 keyword-only, 1.0 semantic-only)
 
 ### MossIndexProcessor (returned from `query()`)
 
-- `add_as_system_message` (default: True): Whether retrieval results become a system message (vs user message)
-- `deduplicate_queries` (default: True): Skip retrieval if the latest user message matches the previous query
-- `max_document_chars` (default: 2000): Maximum characters per document (longer documents are truncated)
+- Inherits the `system_prompt`, `add_as_system_message`, `deduplicate_queries`, and `max_document_chars` values supplied to `MossRetrievalService`
+- Exposes the configured `top_k` and `alpha` values for the active query
 
 ## License
 
