@@ -35,14 +35,14 @@ class MossRetrievalService:
         self._add_as_system_message = add_as_system_message
         self._deduplicate_queries = deduplicate_queries
         self._max_document_chars = max_document_chars
-        logger.info(f"Initialized MossRetrievalService for project: {project_id}")
+        logger.debug("Initialized MossRetrievalService for project")
 
     async def load_index(self, index_name: str):
         """Explicitly load an index before using the pipeline."""
         try:
-            logger.info(f"Loading index: {index_name}")
+            logger.debug(f"Loading index: {index_name}")
             await self._client.load_index(index_name)
-            logger.info(f"Index loaded: {index_name}")
+            logger.debug(f"Index loaded: {index_name}")
         except Exception as exc:  # pragma: no cover - pass-through
             logger.error(f"Failed to load index {index_name}: {exc}")
             raise exc
@@ -55,6 +55,7 @@ class MossRetrievalService:
         alpha: float = 0.8,
     ) -> MossIndexProcessor:
         """Create a pipeline processor for a specific Moss index."""
+        logger.debug(f"Creating MossIndexProcessor for index: {index_name}")
         return MossIndexProcessor(
             client=self._client,
             index_name=index_name,

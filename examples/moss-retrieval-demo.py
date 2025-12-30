@@ -44,13 +44,13 @@ from pipecat_moss import MossRetrievalService
 load_dotenv(override=True)
 
 print("Starting Customer Support Voice AI Bot...")
-logger.info("All components loaded successfully!")
+logger.debug("All components loaded successfully!")
 
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     """Run the customer support bot pipeline."""
 
     # Initialize stt, tts, llm services
-    logger.info("Starting customer support bot")
+    logger.debug("Starting customer support bot")
     stt = DeepgramSTTService(api_key=os.getenv("DEEPGRAM_API_KEY"))
     tts = CartesiaTTSService(
         api_key=os.getenv("CARTESIA_API_KEY"),
@@ -77,7 +77,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 
     # Load the Moss index
     await moss_service.load_index(index_name)
-    logger.info(f"Moss retrieval service initialized (index: {index_name})")
+    logger.debug(f"Moss retrieval service initialized (index: {index_name})")
 
     # System prompt with semantic retrieval support
     system_content = """You are a helpful customer support voice assistant.
@@ -137,7 +137,7 @@ use it to give accurate and detailed responses."""
     # Define transport event handlers
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
-        logger.info("Customer connected to support")
+        logger.debug("Customer connected to support")
         # Kick off the conversation with a customer support greeting
         greeting = (
             "A customer has just connected to customer support. Greet them warmly and ask how you "
@@ -148,7 +148,7 @@ use it to give accurate and detailed responses."""
 
     @transport.event_handler("on_client_disconnected")
     async def on_client_disconnected(transport, client):
-        logger.info("Customer disconnected from support")
+        logger.debug("Customer disconnected from support")
         await task.cancel()
 
     runner = PipelineRunner(handle_sigint=runner_args.handle_sigint)

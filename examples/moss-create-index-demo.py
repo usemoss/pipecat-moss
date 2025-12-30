@@ -13,7 +13,7 @@ async def upload_documents():
 
     This function creates an index in the Moss service with the provided documents.
     """
-    logger.info("Starting the document upload process...")
+    logger.debug("Starting the document upload process...")
 
     client = MossClient(
         project_id=os.getenv("MOSS_PROJECT_ID"), project_key=os.getenv("MOSS_PROJECT_KEY")
@@ -74,7 +74,7 @@ async def upload_documents():
     ]
 
     try:
-        logger.info("Creating the index...")
+        logger.debug("Creating the index...")
         await client.create_index(
             index_name=os.getenv("MOSS_INDEX_NAME"),
             docs=documents,

@@ -72,7 +72,7 @@ class MossIndexProcessor(FrameProcessor):
 
             # Log and push the time taken metric
             if time_taken is not None:
-                logger.info(f"{self}: Retrieval latency: {time_taken}ms")
+                logger.debug(f"{self}: Retrieval latency -> {time_taken}ms")
                 await self.push_frame(
                     MetricsFrame(
                         data=[
@@ -109,16 +109,19 @@ class MossIndexProcessor(FrameProcessor):
             if latest_user_message and not (
                 self._deduplicate_queries and self._last_query == latest_user_message
             ):
+                logger.debug(f"{self}: Retrieving documents for query -> {latest_user_message}")
                 search_result = await self.retrieve_documents(latest_user_message)
+                logger.debug(f"{self}: Retrieved {len(search_result.docs)} documents")
 
                 if self._deduplicate_queries:
                     self._last_query = latest_user_message
 
-                documents = getattr(search_result, "docs", []) or []
+                documents = search_result.docs
                 if documents:
                     content = self._format_documents(documents)
                     role = "system" if self._add_as_system_message else "user"
                     context.add_message({"role": role, "content": content})
+                logger.debug(f"{self}: Added context to the LLM ->\n{content}")
 
             if messages is not None:
                 await self.push_frame(LLMMessagesFrame(context.get_messages()))
