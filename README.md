@@ -43,7 +43,7 @@ pipeline = Pipeline([
     transport.input(),               # audio/user input
     stt,                             # speech to text
     context_aggregator.user(),       # add user text to context
-    moss_service.query(os.getenv("MOSS_INDEX_NAME"), top_k=3, alpha=0.8),  # retrieve relevant docs from Moss
+    moss_service.query(os.getenv("MOSS_INDEX_NAME"), top_k=5, alpha=0.8),  # retrieve relevant docs from Moss
     llm,                             # LLM generates response
     tts,                             # TTS synthesis
     transport.output(),              # stream audio back to user
