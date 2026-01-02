@@ -14,8 +14,6 @@ pip install pipecat-moss
 - Moss project ID and project key (get them from [Moss Portal](https://portal.usemoss.dev))
 - Deepgram, OpenAI, Cartesia API keys (to run the example)
 
-
-
 ## Usage with Pipecat Pipeline
 
 Pipecat-Moss integrates seamlessly into a Pipecat pipeline, enabling efficient retrieval-based operations. It leverages Pipecat's modular architecture to inject semantic context for Voice AI Agents.
@@ -30,7 +28,6 @@ moss_service = MossRetrievalService(
     project_key=os.getenv("MOSS_PROJECT_KEY"),
     system_prompt="Relevant passages from the Moss knowledge base:\n\n",
 )
-
 
 async def setup_indexes():
     await moss_service.load_index(os.getenv("MOSS_INDEX_NAME"))
