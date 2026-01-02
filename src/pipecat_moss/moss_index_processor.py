@@ -104,10 +104,15 @@ class MossIndexProcessor(FrameProcessor):
                 logger.debug(f"{self}: Retrieved {len(search_result.docs)} documents")
 
                 documents = search_result.docs
+                content: str | None = None
                 if documents:
                     content = self._format_documents(documents)
                     context.add_message({"role": "system", "content": content})
-                logger.debug(f"{self}: Added context to the LLM ->\n{content}")
+                    logger.debug(f"{self}: Added context to the LLM ->\n{content}")
+                else:
+                    logger.debug(
+                        f"{self}: No documents retrieved for query -> {latest_user_message}"
+                    )
 
             if messages is not None:
                 await self.push_frame(LLMMessagesFrame(context.get_messages()))
