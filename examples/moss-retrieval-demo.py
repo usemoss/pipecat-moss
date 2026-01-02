@@ -71,8 +71,6 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         project_id=project_id,
         project_key=project_key,
         system_prompt="Relevant passages from the Moss knowledge base:\n\n",
-        add_as_system_message=True,
-        deduplicate_queries=True,
     )
 
     # Load the Moss index

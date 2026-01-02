@@ -32,9 +32,6 @@ class MossIndexProcessor(FrameProcessor):
         top_k: int = 5,
         alpha: float = 0.8,
         system_prompt: str = "Here is additional context retrieved from database:\n\n",
-        add_as_system_message: bool = True,
-        deduplicate_queries: bool = True,
-        max_document_chars: int = 2000,
         **kwargs,
     ):
         """Configure processor defaults for the specified index."""
@@ -44,10 +41,6 @@ class MossIndexProcessor(FrameProcessor):
         self._top_k = top_k
         self._alpha = alpha
         self._system_prompt = system_prompt
-        self._add_as_system_message = add_as_system_message  # If True add retrieved context as system message; else as user message
-        self._deduplicate_queries = deduplicate_queries  # If True, skip retrieval for repeated queries
-        self._max_document_chars = max_document_chars  # Max chars per retrieved document
-        self._last_query: str | None = None
 
     def can_generate_metrics(self) -> bool:
         """Signal that this processor emits metrics frames."""
@@ -55,7 +48,6 @@ class MossIndexProcessor(FrameProcessor):
 
     async def retrieve_documents(self, query: str) -> SearchResult:
         """Retrieve documents for a given query."""
-
         # Perform the query against the Moss index
         result = await self._client.query(
             self._index_name,
@@ -64,7 +56,7 @@ class MossIndexProcessor(FrameProcessor):
             alpha=self._alpha,
         )
 
-        # Emit retrieval latency metrics 
+        # Emit retrieval latency metrics
         if self.metrics_enabled:
             time_taken = getattr(result, "time_taken_ms", None)
             if time_taken is None and isinstance(result, dict):
@@ -106,21 +98,15 @@ class MossIndexProcessor(FrameProcessor):
             context_messages = context.get_messages()
             latest_user_message = self._get_latest_user_text(context_messages)
 
-            if latest_user_message and not (
-                self._deduplicate_queries and self._last_query == latest_user_message
-            ):
+            if latest_user_message:
                 logger.debug(f"{self}: Retrieving documents for query -> {latest_user_message}")
                 search_result = await self.retrieve_documents(latest_user_message)
                 logger.debug(f"{self}: Retrieved {len(search_result.docs)} documents")
 
-                if self._deduplicate_queries:
-                    self._last_query = latest_user_message
-
                 documents = search_result.docs
                 if documents:
                     content = self._format_documents(documents)
-                    role = "system" if self._add_as_system_message else "user"
-                    context.add_message({"role": role, "content": content})
+                    context.add_message({"role": "system", "content": content})
                 logger.debug(f"{self}: Added context to the LLM ->\n{content}")
 
             if messages is not None:
@@ -161,9 +147,7 @@ class MossIndexProcessor(FrameProcessor):
                 extras.append(f"score={score}")
 
             suffix = f" ({', '.join(extras)})" if extras else ""
-            text = doc.text
-            if self._max_document_chars and len(text) > self._max_document_chars:
-                text = f"{text[: self._max_document_chars].rstrip()}\u2026"
+            text = getattr(doc, "text", "") or ""
 
             lines.append(f"{idx}. {text}{suffix}")
         return "\n".join(lines).strip()

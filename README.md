@@ -29,8 +29,6 @@ moss_service = MossRetrievalService(
     project_id=os.getenv("MOSS_PROJECT_ID"),
     project_key=os.getenv("MOSS_PROJECT_KEY"),
     system_prompt="Relevant passages from the Moss knowledge base:\n\n",
-    add_as_system_message=True,
-    deduplicate_queries=True,
 )
 
 
@@ -105,9 +103,6 @@ python examples/moss-retrieval-demo.py
 - `project_id` (required): Moss project ID (can use env var `MOSS_PROJECT_ID`)
 - `project_key` (required): Moss project key (can use env var `MOSS_PROJECT_KEY`)
 - `system_prompt` (default: "Here is additional context retrieved from database:\n\n"): Prefix added ahead of retrieved documents
-- `add_as_system_message` (default: True): Whether retrieval results are injected as system messages instead of user messages
-- `deduplicate_queries` (default: True): Skip retrieval when the latest query matches the previous one
-- `max_document_chars` (default: 2000): Maximum characters per retrieved document (longer docs are truncated)
 - `load_index(index_name)`: Awaitable method that loads the given index before the pipeline runs
 - `query(index_name, *, top_k=5, alpha=0.8)`: Returns a `MossIndexProcessor` for the specified index; `top_k` controls result count, `alpha` blends semantic vs keyword scoring (0.0 keyword-only, 1.0 semantic-only)
 

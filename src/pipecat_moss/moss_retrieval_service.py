@@ -25,16 +25,10 @@ class MossRetrievalService:
         project_id: str | None = None,
         project_key: str | None = None,
         system_prompt: str = "Here is additional context retrieved from database:\n\n",
-        add_as_system_message: bool = True,
-        deduplicate_queries: bool = True,
-        max_document_chars: int = 2000,
     ):
         """Store shared client and default retrieval settings."""
         self._client = MossClient(project_id=project_id, project_key=project_key)
         self._system_prompt = system_prompt
-        self._add_as_system_message = add_as_system_message
-        self._deduplicate_queries = deduplicate_queries
-        self._max_document_chars = max_document_chars
         logger.debug("Initialized MossRetrievalService for project")
 
     async def load_index(self, index_name: str):
@@ -62,7 +56,4 @@ class MossRetrievalService:
             top_k=top_k,
             alpha=alpha,
             system_prompt=self._system_prompt,
-            add_as_system_message=self._add_as_system_message,
-            deduplicate_queries=self._deduplicate_queries,
-            max_document_chars=self._max_document_chars,
         )
