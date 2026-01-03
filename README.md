@@ -52,16 +52,11 @@ pipeline = Pipeline([
 
 Tested with Pipecat v0.0.94. Please upgrade to this version (or newer) to ensure API compatibility with the snippets below.
 
+## Contributing 
+
+If you are contributing or want to build from source, follow the [CONTRIBUTING.md](CONTRIBUTING.md) setup steps.
+
 ## Running the Example
-
-### Install Dependencies
-
-To set up the development environment with all dependencies for running examples:
-
-```bash
-uv sync
-source .venv/bin/activate # Activate the virtual environment
-```
 
 ### Setup Environment Variables
 
@@ -101,7 +96,7 @@ python examples/moss-retrieval-demo.py
 - `project_key` (required): Moss project key (can use env var `MOSS_PROJECT_KEY`)
 - `system_prompt` (default: "Here is additional context retrieved from database:\n\n"): Prefix added ahead of retrieved documents
 - `load_index(index_name)`: Awaitable method that loads the given index before the pipeline runs
-- `query(index_name, *, top_k=5, alpha=0.8)`: Returns a `MossIndexProcessor` for the specified index; `top_k` controls result count, `alpha` blends semantic vs keyword scoring (0.0 keyword-only, 1.0 semantic-only)
+- `query(index_name, *, top_k=5)`: Returns a `MossIndexProcessor` for the specified index; `top_k` controls result count, `alpha` blends semantic vs keyword scoring (0.0 keyword-only, 1.0 semantic-only)
 
 ## License
 

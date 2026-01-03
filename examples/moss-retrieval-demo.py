@@ -113,7 +113,7 @@ use it to give accurate and detailed responses."""
             rtvi,  # RTVI processor
             stt,  # Speech-to-text
             context_aggregator.user(),  # User responses
-            moss_service.query(index_name, top_k=top_k, alpha=0.5),  # Moss retrieval
+            moss_service.query(index_name, top_k=top_k),  # Moss retrieval
             llm,  # LLM (receives enhanced context)
             tts,  # Text-to-speech
             transport.output(),  # Transport bot output

@@ -41,6 +41,7 @@ class MossIndexProcessor(FrameProcessor):
         self._top_k = top_k
         self._alpha = alpha
         self._system_prompt = system_prompt
+        self._last_query = None
 
     def can_generate_metrics(self) -> bool:
         """Signal that this processor emits metrics frames."""
@@ -62,9 +63,7 @@ class MossIndexProcessor(FrameProcessor):
             if time_taken is None and isinstance(result, dict):
                 time_taken = result.get("time_taken_ms")
 
-            # Log and push the time taken metric
             if time_taken is not None:
-                logger.debug(f"{self}: Retrieval latency -> {time_taken}ms")
                 await self.push_frame(
                     MetricsFrame(
                         data=[
@@ -99,20 +98,29 @@ class MossIndexProcessor(FrameProcessor):
             latest_user_message = self._get_latest_user_text(context_messages)
 
             if latest_user_message:
-                logger.debug(f"{self}: Retrieving documents for query -> {latest_user_message}")
-                search_result = await self.retrieve_documents(latest_user_message)
-                logger.debug(f"{self}: Retrieved {len(search_result.docs)} documents")
-
-                documents = search_result.docs
-                content: str | None = None
-                if documents:
-                    content = self._format_documents(documents)
-                    context.add_message({"role": "system", "content": content})
-                    logger.debug(f"{self}: Added context to the LLM ->\n{content}")
+                if self._last_query == latest_user_message:
+                    logger.debug(
+                        f"{self}: Skipping retrieval; duplicate query -> {latest_user_message}"
+                    )
                 else:
                     logger.debug(
-                        f"{self}: No documents retrieved for query -> {latest_user_message}"
+                        f"{self}: Retrieving documents for query -> {latest_user_message}"
                     )
+                    search_result = await self.retrieve_documents(latest_user_message)
+                    logger.debug(f"{self}: Retrieved {len(search_result.docs)} documents in {search_result.time_taken_ms} ms")
+
+                    documents = search_result.docs
+                    content: str | None = None
+                    if documents:
+                        content = self._format_documents(documents)
+                        context.add_message({"role": "system", "content": content})
+                        logger.debug(f"{self}: Added context to the LLM ->\n{content}")
+                    else:
+                        logger.debug(
+                            f"{self}: No documents retrieved for query -> {latest_user_message}"
+                        )
+
+                    self._last_query = latest_user_message
 
             if messages is not None:
                 await self.push_frame(LLMMessagesFrame(context.get_messages()))
