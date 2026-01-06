@@ -28,11 +28,6 @@ With the environment active you can run the sample pipelines shipped in the
 
 Follow the existing formatting and logging patterns in the codebase.
 
-## Testing
-
-Run the relevant test suites or demos before opening a pull request. If you add
-new functionality, include tests or examples that demonstrate the behavior.
-
 ## Submitting Changes
 
 1. Open a pull request that describes the motivation, highlights user-facing
