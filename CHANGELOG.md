@@ -11,6 +11,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of `pipecat-moss` integration.
 - `MossRetrievalService` for augmenting Pipecat LLM contexts with retrieved documents
-- `MossIndexProcessor` for configuring retrieval behavior in Pipecat pipelines.
 - Example `moss-retrieval-demo.py` demonstrating a full voice pipeline with retrieval.
 - `moss-create-index-demo.py` for creating and populating a Moss index.
