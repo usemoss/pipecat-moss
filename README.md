@@ -50,7 +50,7 @@ pipeline = Pipeline([
 
 ## Pipecat Compatibility
 
-Tested with Pipecat v0.0.94. Please upgrade to this version (or newer) to ensure API compatibility with the snippets below.
+Tested with Pipecat v0.0.99. Please upgrade to this version (or newer) to ensure API compatibility with the snippets below.
 
 ## Contributing 
 
