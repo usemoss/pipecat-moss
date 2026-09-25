@@ -13,10 +13,8 @@ from typing import Any
 
 from inferedge_moss import MossClient, SearchResult
 from loguru import logger
-from pipecat.frames.frames import ErrorFrame, Frame, LLMContextFrame, LLMMessagesFrame, MetricsFrame
+from pipecat.frames.frames import ErrorFrame, Frame, LLMContextFrame, MetricsFrame
 from pipecat.metrics.metrics import ProcessingMetricsData
-from pipecat.processors.aggregators.llm_context import LLMContext
-from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContextFrame
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 
 __all__ = ["MossIndexProcessor"]
@@ -80,18 +78,11 @@ class MossIndexProcessor(FrameProcessor):
         """Process frames to extract queries and augment LLM context."""
         await super().process_frame(frame, direction)
 
-        context = None
-        messages = None
-
-        if isinstance(frame, (LLMContextFrame, OpenAILLMContextFrame)):
-            context = frame.context
-        elif isinstance(frame, LLMMessagesFrame):
-            messages = frame.messages
-            context = LLMContext(messages)
-
-        if not context:
+        if not isinstance(frame, LLMContextFrame):
             await self.push_frame(frame, direction)
             return
+
+        context = frame.context
 
         try:
             context_messages = context.get_messages()
@@ -122,12 +113,11 @@ class MossIndexProcessor(FrameProcessor):
 
                     self._last_query = latest_user_message
 
-            if messages is not None:
-                await self.push_frame(LLMMessagesFrame(context.get_messages()))
-            elif isinstance(frame, (LLMContextFrame, OpenAILLMContextFrame)):
-                await self.push_frame(type(frame)(context=context))  # type: ignore[arg-type]
-            else:
-                await self.push_frame(frame)
+            # The context was augmented in place, so the frame that carried
+            # it is already correct. Rebuilding it here would drop the fields
+            # it arrived with -- speculation above all, which tells the
+            # service this inference is provisional.
+            await self.push_frame(frame)
 
         except Exception as exc:  # pragma: no cover - defensive logging
             logger.exception(f"{self}: error while running retrieval: {exc}")

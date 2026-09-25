@@ -7,9 +7,9 @@ requires-python = ">=3.10"
 dependencies = [
     "inferedge-moss>=1.0.0b8",
     "loguru>=0.7.0",
-    "pipecat-ai>=0.0.99",
+    "pipecat-ai>=1.8",
     "pydantic>=2.0.0",
-    "pipecat-ai[runner]>=0.0.99",
+    "pipecat-ai[runner]>=1.8",
 ]
 
 [dependency-groups]
