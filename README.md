@@ -11,7 +11,7 @@ pip install pipecat-moss
 ```
 
 ## Prerequisites
-- Moss project ID and project key (get them from [Moss Portal](https://portal.usemoss.dev))
+- Moss project ID and project key (get them from [Moss Portal](https://moss.dev))
 - Deepgram, OpenAI, Cartesia API keys (to run the example)
 
 ## Usage with Pipecat Pipeline
@@ -50,7 +50,7 @@ pipeline = Pipeline([
 
 ## Pipecat Compatibility
 
-Tested with Pipecat v0.0.99. Please upgrade to this version (or newer) to ensure API compatibility with the snippets below.
+Requires Python 3.11+, `pipecat-ai>=1.8,<2` and `moss>=1.20.0`. Tested with Pipecat 1.13. Use `pipecat-moss` 0.0.x only with Pipecat < 1.8.
 
 ## Contributing 
 
@@ -96,7 +96,7 @@ python examples/moss-retrieval-demo.py
 - `project_key` (required): Moss project key (can use env var `MOSS_PROJECT_KEY`)
 - `system_prompt` (default: "Here is additional context retrieved from database:\n\n"): Prefix added ahead of retrieved documents
 - `load_index(index_name)`: Awaitable method that loads the given index before the pipeline runs
-- `query(index_name, *, top_k=5)`: Returns a `MossIndexProcessor` for the specified index; `top_k` controls result count, `alpha` blends semantic vs keyword scoring (0.0 keyword-only, 1.0 semantic-only)
+- `query(index_name, *, top_k=5, alpha=0.8)`: Returns a `MossIndexProcessor` for the specified index; `top_k` controls result count, `alpha` blends semantic vs keyword scoring (0.0 keyword-only, 1.0 semantic-only)
 
 ## License
 
@@ -104,6 +104,6 @@ This integration is provided under a permissive open source license (BSD-2 or eq
 
 ## Support
 
-- [Moss Docs](https://docs.usemoss.dev)
+- [Moss Docs](https://docs.moss.dev)
 - [Moss Discord](https://discord.com/invite/eMXExuafBR)
 - [Pipecat Docs](https://docs.pipecat.ai)

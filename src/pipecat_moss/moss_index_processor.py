@@ -11,12 +11,10 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from inferedge_moss import MossClient, SearchResult
 from loguru import logger
-from pipecat.frames.frames import ErrorFrame, Frame, LLMContextFrame, LLMMessagesFrame, MetricsFrame
+from moss import MossClient, QueryOptions, SearchResult
+from pipecat.frames.frames import ErrorFrame, Frame, LLMContextFrame, MetricsFrame
 from pipecat.metrics.metrics import ProcessingMetricsData
-from pipecat.processors.aggregators.llm_context import LLMContext
-from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContextFrame
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 
 __all__ = ["MossIndexProcessor"]
@@ -53,8 +51,7 @@ class MossIndexProcessor(FrameProcessor):
         result = await self._client.query(
             self._index_name,
             query,
-            top_k=self._top_k,
-            alpha=self._alpha,
+            QueryOptions(top_k=self._top_k, alpha=self._alpha),
         )
 
         # Emit retrieval latency metrics
@@ -80,18 +77,11 @@ class MossIndexProcessor(FrameProcessor):
         """Process frames to extract queries and augment LLM context."""
         await super().process_frame(frame, direction)
 
-        context = None
-        messages = None
-
-        if isinstance(frame, (LLMContextFrame, OpenAILLMContextFrame)):
-            context = frame.context
-        elif isinstance(frame, LLMMessagesFrame):
-            messages = frame.messages
-            context = LLMContext(messages)
-
-        if not context:
+        if not isinstance(frame, LLMContextFrame):
             await self.push_frame(frame, direction)
             return
+
+        context = frame.context
 
         try:
             context_messages = context.get_messages()
@@ -122,12 +112,7 @@ class MossIndexProcessor(FrameProcessor):
 
                     self._last_query = latest_user_message
 
-            if messages is not None:
-                await self.push_frame(LLMMessagesFrame(context.get_messages()))
-            elif isinstance(frame, (LLMContextFrame, OpenAILLMContextFrame)):
-                await self.push_frame(type(frame)(context=context))  # type: ignore[arg-type]
-            else:
-                await self.push_frame(frame)
+            await self.push_frame(frame, direction)
 
         except Exception as exc:  # pragma: no cover - defensive logging
             logger.exception(f"{self}: error while running retrieval: {exc}")

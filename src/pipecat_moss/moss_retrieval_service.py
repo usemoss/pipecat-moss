@@ -8,8 +8,10 @@
 
 from __future__ import annotations
 
-from inferedge_moss import MossClient
+import os
+
 from loguru import logger
+from moss import MossClient
 
 from .moss_index_processor import MossIndexProcessor
 
@@ -27,6 +29,10 @@ class MossRetrievalService:
         system_prompt: str = "Here is additional context retrieved from database:\n\n",
     ):
         """Store shared client and default retrieval settings."""
+        project_id = project_id or os.getenv("MOSS_PROJECT_ID")
+        project_key = project_key or os.getenv("MOSS_PROJECT_KEY")
+        if not project_id or not project_key:
+            raise ValueError("Moss project_id and project_key are required")
         self._client = MossClient(project_id=project_id, project_key=project_key)
         self._system_prompt = system_prompt
         logger.debug("Initialized MossRetrievalService for project")

@@ -2,23 +2,25 @@
 
 from __future__ import annotations
 
-from inferedge_moss import (
-    AddDocumentsOptions,
+from moss import (
     DocumentInfo,
     GetDocumentsOptions,
     IndexInfo,
     MossClient,
+    MutationOptions,
+    QueryOptions,
     SearchResult,
 )
 
 from .moss_retrieval_service import MossRetrievalService
 
 __all__ = [
-    "AddDocumentsOptions",
     "DocumentInfo",
     "GetDocumentsOptions",
     "IndexInfo",
     "MossClient",
     "MossRetrievalService",
+    "MutationOptions",
+    "QueryOptions",
     "SearchResult",
 ]

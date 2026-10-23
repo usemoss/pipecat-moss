@@ -174,7 +174,7 @@ async def bot(runner_args: RunnerArguments):
             logger.error(f"   - {var}")
         logger.error("\nPlease update your .env file with the required API keys")
         logger.error("Get your OpenAI API key from: https://platform.openai.com/")
-        logger.error("Get your Moss credentials from: https://portal.usemoss.dev")
+        logger.error("Get your Moss credentials from: https://moss.dev")
         return
 
     transport_params = {

@@ -2,8 +2,8 @@ import asyncio
 import os
 
 from dotenv import load_dotenv
-from inferedge_moss import DocumentInfo, MossClient
 from loguru import logger
+from moss import DocumentInfo, MossClient
 
 load_dotenv()
 
@@ -76,8 +76,8 @@ async def upload_documents():
     try:
         logger.debug("Creating the index...")
         await client.create_index(
-            index_name=os.getenv("MOSS_INDEX_NAME"),
-            docs=documents,
+            os.getenv("MOSS_INDEX_NAME"),
+            documents,
             model_id="moss-minilm",
         )
         logger.success("Index created successfully.")
