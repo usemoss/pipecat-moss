@@ -1,5 +1,7 @@
 # Pipecat Moss Integration
 
+> This repository is not published. `pipecat-moss` on PyPI is released from [`packages/pipecat-moss` in usemoss/moss](https://github.com/usemoss/moss/tree/main/packages/pipecat-moss). Open issues and pull requests there.
+
 Moss delivers sub-10ms semantic retrieval, ensuring your Pipecat AI voice agents respond naturally without noticeable delays.
 
 ## Installation
